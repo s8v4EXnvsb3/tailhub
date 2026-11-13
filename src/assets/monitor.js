@@ -35,3 +35,15 @@
   });
   window.__reportError = (msg, stack) => report('ToolError', msg, stack);
 })();
+
+/* Visit note: once per browser per day, sends only the page path to our own /api/visit. Skips bots and the owner (open any page with ?owner=1 once). */
+(() => {
+  try {
+    if (location.search.includes('owner=1')) localStorage.setItem('th-owner', '1');
+    if (localStorage.getItem('th-owner') || navigator.webdriver || /bot|crawl|spider|headless|lighthouse/i.test(navigator.userAgent) || !/^https:/.test(location.protocol)) return;
+    const day = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('th-seen') === day) return;
+    localStorage.setItem('th-seen', day);
+    fetch('/api/visit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ p: location.pathname }), keepalive: true }).catch(() => {});
+  } catch {}
+})();
