@@ -104,5 +104,6 @@ export function buildPost(t) {
 export const postTitle = (t) => {
   if (t.kind === 'ffmpeg' && t.mode === 'convert' && !CONTENT[t.slug]) return `How to Convert ${t.title.replace(' to ', ' to ')} Free in Your Browser`;
   if (t.kind === 'tts') return t.multi ? 'Text to Speech in 26 Languages: A Free Browser Guide' : `${t.langName} Text to Speech: How It Works and How to Use It`;
-  return `${t.title}: What It Does and How to Use It`;
+  const full = `${t.title}: What It Does and How to Use It`;
+  return full.length > 58 ? `${t.title}: How to Use It` : full;
 };

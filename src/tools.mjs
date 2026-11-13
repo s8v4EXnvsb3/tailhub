@@ -118,7 +118,7 @@ export const tools = [
   u('age-calculator', 'Age Calculator', '', 'calc', 'Find an exact age in years, months and days, plus days until the next birthday.'),
   u('bmi-calculator', 'BMI Calculator', '', 'calc', 'Calculate body mass index in metric or imperial units.'),
   u('loan-calculator', 'Loan Calculator', '', 'calc', 'Estimate monthly payments and total interest for a loan or mortgage.'),
-  u('tip-calculator', 'Tip Calculator', '', 'calc', 'Split a bill and work out the tip per person.'),
+  u('tip-calculator', 'Tip Calculator', '', 'calc', 'Split a bill between friends and work out the tip per person. Choose a tip percentage and see each share instantly.'),
   u('roman-numeral-converter', 'Roman Numeral Converter', '', 'calc', 'Convert numbers to Roman numerals and back (1 to 3999).'),
   u('pomodoro-timer', 'Pomodoro Timer', '', 'calc', 'A focus timer with 25-minute work sessions and short breaks.'),
 
