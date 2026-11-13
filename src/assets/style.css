@@ -198,3 +198,5 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline-offset:0
 .note.err{color:var(--errt)}
 .skip{position:absolute;left:8px;top:-60px;z-index:100;background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:var(--r);font-weight:600}.skip:focus{top:8px}
 main:focus{outline:0}
+.contact{max-width:680px}.contact h2{margin:28px 0 8px;font-size:20px}.contact p{color:var(--mut)}.contact .btn{display:inline-flex;gap:8px;align-items:center}
+.sponsors .lnk{color:var(--tx)}.sponsors .lnk:hover{text-decoration:underline}
