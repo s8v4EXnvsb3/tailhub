@@ -8,6 +8,7 @@ const conv = (slug, title, from, to, accept, icon, extra = {}) => ({
   desc: `Convert ${from} to ${to.toUpperCase()} online for free. Runs in your browser, your file is never uploaded.`,
   ...extra,
 });
+const ai = (slug, title, desc) => ({ slug, title, kind: 'ai', icon: '', category: 'ai', desc });
 const u = (slug, title, icon, category, desc) => ({ slug, title, kind: 'util', icon, category, desc });
 
 const LANGS = [
@@ -97,6 +98,13 @@ export const tools = [
   u('timestamp-converter', 'Unix Timestamp Converter', '', 'dev', 'Convert Unix epoch timestamps to readable dates and back.'),
   u('markdown-previewer', 'Markdown Previewer', '', 'dev', 'Write Markdown on the left and see the formatted result on the right.'),
 
+  // ---------- AI tools (models run in the browser)
+  ai('ocr-image-to-text', 'Image to Text (OCR)', 'Read the text in a photo, screenshot or scan and copy it. 16 languages, runs in your browser.'),
+  ai('background-remover', 'Background Remover', 'Cut the background out of a portrait photo and save a transparent PNG. No upload.'),
+  ai('speech-to-text', 'Speech to Text & Subtitles', 'Transcribe audio or video to text, SRT or VTT subtitles using Whisper, running on your device.'),
+  ai('blur-faces', 'Blur Faces in Photos', 'Find faces in a photo and blur, pixelate or black them out before you share it.'),
+  ai('image-upscaler', 'AI Image Upscaler', 'Enlarge a small image to twice its size with a super-resolution model that runs in your browser.'),
+
   // ---------- Generators
   u('qr-code-generator', 'QR Code Generator', '', 'gen', 'Make a QR code for any link or text. Download as PNG or SVG.'),
   u('password-generator', 'Password Generator', '', 'gen', 'Create strong random passwords using your browser\'s secure random generator.'),
@@ -128,6 +136,7 @@ export const categories = [
   { id: 'convert', name: 'Audio converters', icon: '', hue: 265, blurb: 'Turn video and audio files into MP3 or WAV.' },
   { id: 'video', name: 'Video tools', icon: '', hue: 330, blurb: 'Convert, make GIFs, mute and shrink for sharing.' },
   { id: 'audio', name: 'Audio tools', icon: '', hue: 25, blurb: 'Compress, cut and make ringtones.' },
+  { id: 'ai', name: 'AI tools', icon: '', hue: 20, blurb: 'OCR, background removal, subtitles, face blur and upscaling, all on your device.' },
   { id: 'speech', name: 'Text to Speech', icon: '', hue: 160, blurb: 'Read text aloud in 26 languages.' },
   { id: 'text', name: 'Text tools', icon: '', hue: 200, blurb: 'Count, clean, sort, compare and encode text.' },
   { id: 'dev', name: 'Developer tools', icon: '', hue: 140, blurb: 'JSON, hashes, JWT, regex, CSV and more.' },

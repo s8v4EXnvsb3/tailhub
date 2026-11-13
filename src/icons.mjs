@@ -12,7 +12,7 @@ export function ico(name, size = 20) {
   }
   return cache[name].replace(/width="24"/, `width="${size}"`).replace(/height="24"/, `height="${size}"`).replace('<svg', '<svg class="i" aria-hidden="true" focusable="false"');
 }
-export const CAT_ICON = { convert: 'audio-waveform', video: 'clapperboard', audio: 'headphones', speech: 'languages', text: 'type', dev: 'code-xml', gen: 'wand-sparkles', calc: 'calculator', image: 'image' };
+export const CAT_ICON = { convert: 'audio-waveform', video: 'clapperboard', audio: 'headphones', ai: 'sparkles', speech: 'languages', text: 'type', dev: 'code-xml', gen: 'wand-sparkles', calc: 'calculator', image: 'image' };
 const S = {
   'mp4-to-mp3': 'film', 'mov-to-mp3': 'film', 'webm-to-mp3': 'globe', 'm4a-to-mp3': 'music', 'whatsapp-audio-to-mp3': 'message-circle', 'video-to-mp3': 'video',
   'wav-to-mp3': 'audio-waveform', 'amr-to-mp3': 'smartphone', 'flac-to-mp3': 'disc-3', 'ogg-to-mp3': 'volume-2', 'aac-to-mp3': 'headphones', 'mkv-to-mp3': 'clapperboard',
@@ -27,6 +27,7 @@ const S = {
   'unit-converter': 'ruler', 'percentage-calculator': 'percent', 'age-calculator': 'cake', 'bmi-calculator': 'scale', 'loan-calculator': 'landmark', 'tip-calculator': 'utensils',
   'roman-numeral-converter': 'landmark', 'pomodoro-timer': 'timer', 'image-compressor': 'file-image', 'image-to-pdf': 'file-output', 'pdf-merge': 'combine', 'pdf-split': 'split',
   'image-to-base64': 'binary', 'color-converter': 'palette', 'css-gradient-generator': 'blend',
+  'ocr-image-to-text': 'scan-text', 'background-remover': 'image-minus', 'speech-to-text': 'captions', 'blur-faces': 'scan-face', 'image-upscaler': 'maximize-2',
 };
 export const toolIcon = (t) => ico(S[t.slug] || (t.kind === 'tts' ? 'languages' : CAT_ICON[t.category]), 22);
 export const catIcon = (c, size = 18) => ico(CAT_ICON[c.id], size);
