@@ -197,12 +197,26 @@ const tools = {
         const m = await tf(); bar(0.01, 'Loading model...');
         if (!up) up = await m.pipeline('image-to-image', 'Xenova/swin2SR-classical-sr-x2-64', { dtype: 'q8', device: 'wasm', progress_callback: dlProgress('Downloading model') });
         const { canvas, scaled, w, h } = await loadBitmap(f, MAX); name = base(f);
-        bar(0.7, `Upscaling ${canvas.width}x${canvas.height} to ${canvas.width * 2}x${canvas.height * 2}. This can take a while...`); await new Promise((r) => setTimeout(r, 30));
-        const t0 = performance.now(), out = await up(await m.RawImage.fromCanvas(canvas));
-        const W = canvas.width * 2, H = canvas.height * 2; // the model pads to a multiple of 8, so crop back to exactly 2x
-        const c = $('after'); c.width = W; c.height = H; const id = new ImageData(W, H), ch = out.channels;
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const s = (y * out.width + x) * ch, d = (y * W + x) * 4; id.data[d] = out.data[s]; id.data[d + 1] = out.data[s + 1]; id.data[d + 2] = out.data[s + 2]; id.data[d + 3] = 255; }
-        c.getContext('2d').putImageData(id, 0, 0);
+        const W = canvas.width * 2, H = canvas.height * 2; // the model pads to a multiple of 8, so we crop each tile back to exactly 2x
+        const c = $('after'); c.width = W; c.height = H; const cx = c.getContext('2d');
+        // Work in tiles so the bar moves and the page stays responsive. Each tile carries a margin of real neighbouring pixels, which is cut off again, so seams stay hidden.
+        const T = 128, P = 16, nx = Math.ceil(canvas.width / T), ny = Math.ceil(canvas.height / T), total = nx * ny;
+        if (scaled) note(`Your ${w}x${h} image is larger than ${MAX}px, so it is reduced to ${canvas.width}x${canvas.height} before upscaling. Output will be ${W}x${H}.`, 'warn');
+        const t0 = performance.now(); let done = 0;
+        for (let ty = 0; ty < ny; ty++) for (let tx = 0; tx < nx; tx++) {
+          const x0 = tx * T, y0 = ty * T, cw = Math.min(T, canvas.width - x0), ch0 = Math.min(T, canvas.height - y0);
+          const sx = Math.max(0, x0 - P), sy = Math.max(0, y0 - P), ex = Math.min(canvas.width, x0 + cw + P), ey = Math.min(canvas.height, y0 + ch0 + P);
+          const tc = document.createElement('canvas'); tc.width = ex - sx; tc.height = ey - sy; tc.getContext('2d').drawImage(canvas, sx, sy, tc.width, tc.height, 0, 0, tc.width, tc.height);
+          const eta = done ? Math.round(((performance.now() - t0) / done) * (total - done) / 1000) : 0;
+          bar(0.1 + 0.88 * (done / total), `Upscaling part ${done + 1} of ${total} (${canvas.width}x${canvas.height} to ${W}x${H})${done ? `, about ${eta} s left` : ''}`);
+          await new Promise((r) => setTimeout(r, 30));
+          const out = await up(await m.RawImage.fromCanvas(tc)), och = out.channels, ow = (ex - sx) * 2, oh = (ey - sy) * 2;
+          const id = new ImageData(ow, oh);
+          for (let y = 0; y < oh; y++) for (let x = 0; x < ow; x++) { const q = (y * out.width + x) * och, d = (y * ow + x) * 4; id.data[d] = out.data[q]; id.data[d + 1] = out.data[q + 1]; id.data[d + 2] = out.data[q + 2]; id.data[d + 3] = 255; }
+          const tmp = document.createElement('canvas'); tmp.width = ow; tmp.height = oh; tmp.getContext('2d').putImageData(id, 0, 0);
+          cx.drawImage(tmp, (x0 - sx) * 2, (y0 - sy) * 2, cw * 2, ch0 * 2, x0 * 2, y0 * 2, cw * 2, ch0 * 2);
+          done++;
+        }
         const b = $('before'); b.width = canvas.width; b.height = canvas.height; b.getContext('2d').drawImage(canvas, 0, 0);
         $('result').hidden = false; barOff();
         note(`${canvas.width}x${canvas.height} to ${W}x${H} in ${((performance.now() - t0) / 1000).toFixed(1)} s.${scaled ? ` Your ${w}x${h} image was reduced to fit the ${MAX}px limit first.` : ''}`, 'ok');

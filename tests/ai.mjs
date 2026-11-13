@@ -54,10 +54,20 @@ await run('blur-faces', async () => {
   const d = await download('#dl'); check('blur PNG download', d.buf.subarray(1, 4).toString() === 'PNG' && d.name === 'face-blurred.png', d.name);
 });
 await run('image-upscaler', async () => {
+  await p.evaluate(() => { window.__pt = []; new MutationObserver(() => window.__pt.push(document.getElementById('pt').textContent)).observe(document.getElementById('pt'), { childList: true, characterData: true, subtree: true }); });
   await upload('small.png'); await done(); await p.waitForSelector('#result:not([hidden])');
+  const pts = await p.evaluate(() => window.__pt); const parts = [...new Set(pts.map((t) => (t.match(/part (\d+) of (\d+)/) || [])[0]).filter(Boolean))];
+  check('upscaler shows progress per part (4 parts)', parts.length === 4 && /of 4/.test(parts[0]), parts);
+  const seam = await p.evaluate(() => { const c = document.getElementById('after'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const col = (x) => { let t = 0; for (let y = 0; y < c.height; y++) { const i = (y * c.width + x) * 4, j = i + 4; t += Math.abs(d[i] - d[j]) + Math.abs(d[i + 1] - d[j + 1]) + Math.abs(d[i + 2] - d[j + 2]); } return t / c.height; }; let base = 0, n = 0; for (let x = 200; x < 300; x++) { if (x >= 253 && x <= 258) continue; base += col(x); n++; } return { seam: col(255), base: base / n }; });
+  check('upscaler tile seam is not visible (seam diff < 2x normal)', seam.seam < seam.base * 2 + 1, seam);
   const s = await p.evaluate(() => ({ b: [document.getElementById('before').width, document.getElementById('before').height], a: [document.getElementById('after').width, document.getElementById('after').height] }));
   check('upscaler doubles size (203x151 -> 406x302)', s.b.join('x') === '203x151' && s.a.join('x') === '406x302', s);
-  const d = await download('#dl'); check('upscaler PNG download', d.buf.subarray(1, 4).toString() === 'PNG' && d.name === 'small-2x.png', d.name);
+  execFileSync('ffmpeg', ['-nostdin', '-y', '-v', 'error', '-i', FX + 'face.jpg', '-vf', 'scale=800:-1', FX + 'big.png']);
+  const d0 = await download('#dl'); check('upscaler PNG download', d0.buf.subarray(1, 4).toString() === 'PNG' && d0.name === 'small-2x.png', d0.name);
+  await upload('big.png'); await p.waitForFunction(() => /reduced to/.test(document.getElementById('info').textContent) && !document.getElementById('result').hidden && /^\d+x\d+ to/.test(document.getElementById('info').textContent));
+  const big = await p.evaluate(() => ({ a: [document.getElementById('after').width, document.getElementById('after').height], info: document.getElementById('info').textContent }));
+  check('large image is reduced to 384px and doubled (768 on the long side) with a notice', Math.max(...big.a) === 768 && /reduced/.test(big.info), big);
+  const d = { buf: d0.buf, name: d0.name }; check('upscaler PNG download (re-check)', d.buf.subarray(1, 4).toString() === 'PNG' && d.name === 'small-2x.png', d.name);
 });
 console.log(`\n${pass} passed, ${fail} failed`); console.log('JS errors:', errs.length ? errs.slice(0, 6) : 'none');
 await b.close(); process.exit(fail || errs.length ? 1 : 0);

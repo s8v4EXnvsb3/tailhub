@@ -65,7 +65,7 @@ input[type=checkbox]{width:auto;accent-color:var(--a)}
 .chk{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--mut);cursor:pointer;padding:6px 4px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0}.row.c{justify-content:center}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-.note{font-size:14px;color:var(--mut);margin:8px 0;min-height:1.2em}.note.ok{color:var(--ok)}.note.err{color:var(--err)}
+.note{font-size:14px;color:var(--mut);margin:8px 0;min-height:1.2em}.note.ok{color:var(--ok)}.note.err{color:var(--err)}.note.warn{font-weight:600;color:var(--tx)}
 .drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;background:var(--card2);transition:border-color .15s}
 .drop:hover,.drop.over{border-color:var(--a)}
 .drop-i{width:44px;height:44px;border-radius:var(--r);margin:0 auto 10px;display:grid;place-items:center;background:var(--card);border:1px solid var(--line);color:var(--a)}
