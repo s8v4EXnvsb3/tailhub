@@ -112,6 +112,7 @@ go.addEventListener('click', async () => {
     done.hidden = false; status.textContent = 'Finished.'; fill.style.width = '100%';
     try { await ff.deleteFile(inName); await ff.deleteFile(out); } catch {}
   } catch (e) {
+    window.__reportError && window.__reportError(location.pathname + ': ' + (e.message || e), e.stack);
     status.textContent = '' + (e.message || e); status.classList.add('err');
     ffmpeg = null; // force fresh engine after a crash / OOM
   } finally { go.disabled = false; }

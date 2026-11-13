@@ -37,7 +37,7 @@ const dlProgress = (label) => { const files = {}; return (e) => {
   if (e.status === 'progress' && e.total) { files[e.file] = { l: e.loaded, t: e.total }; let l = 0, t = 0; for (const k in files) { l += files[k].l; t += files[k].t; } bar(l / t, `${label}: ${fmtB(l)} of ${fmtB(t)}`); }
   else if (e.status === 'ready') bar(1, 'Model ready');
 }; };
-const fail = (e) => { barOff(); busy(false); note(/fetch|network|load/i.test(String(e)) ? 'Could not download the model. Check your connection and try again. (' + (e.message || e) + ')' : 'Something went wrong: ' + (e.message || e), 'err'); console.error(e); };
+const fail = (e) => { barOff(); busy(false); note(/fetch|network|load/i.test(String(e)) ? 'Could not download the model. Check your connection and try again. (' + (e.message || e) + ')' : 'Something went wrong: ' + (e.message || e), 'err'); console.error(e); window.__reportError && window.__reportError(location.pathname + ": " + (e.message || e), e.stack); };
 
 const tools = {
   // ======================================================== OCR
