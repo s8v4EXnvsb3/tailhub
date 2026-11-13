@@ -167,6 +167,7 @@ const siteDate = tools.map(dateOf).sort().pop();
 const lastmodOf = (u) => { const k = slugOfUrl(u); return k ? dates[k].d : siteDate; };
 const urls = ['/', '/blog/', '/contact/', '/about/', '/privacy/', ...tools.flatMap((t) => [toolUrl(t), postUrl(t)])];
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${URL_BASE}${u}</loc><lastmod>${lastmodOf(u)}</lastmod></url>`).join('')}</urlset>`);
+write('google1dfdd222b0acc5e5.html', 'google-site-verification: google1dfdd222b0acc5e5.html');
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${URL_BASE}/sitemap.xml\n`);
 console.log(`Built ${tools.length} tools + ${tools.length} blog posts -> dist/`);
 fs.writeFileSync(datesFile, JSON.stringify(dates, null, 1) + '\n');
