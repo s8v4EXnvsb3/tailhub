@@ -44,6 +44,6 @@
     const day = new Date().toISOString().slice(0, 10);
     if (localStorage.getItem('th-seen') === day) return;
     localStorage.setItem('th-seen', day);
-    fetch('/api/visit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ p: location.pathname }), keepalive: true }).catch(() => {});
+    fetch('/api/visit/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ p: location.pathname }), keepalive: true }).catch(() => {});
   } catch {}
 })();
