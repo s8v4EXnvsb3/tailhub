@@ -4,7 +4,7 @@ const b = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Micros
 let p, ok = 0, bad = 0;
 const fresh = async () => { p = await (await b.newContext()).newPage(); };
 const check = (n, c, g) => { c ? ok++ : bad++; console.log(c ? 'PASS' : 'FAIL', n, c ? '' : JSON.stringify(g)); };
-await fresh(); await p.goto(base + '/'); await p.keyboard.press('Tab');
+await fresh(); await p.goto(base + '/image-compressor/'); await p.keyboard.press('Tab');
 check('first Tab stop is the skip link', /Skip to content/.test(await p.evaluate(() => document.activeElement.textContent)));
 await p.keyboard.press('Enter'); check('skip link moves focus to main', await p.evaluate(() => document.activeElement.id === 'main'));
 for (const slug of ['background-remover', 'image-compressor', 'pdf-merge', 'compress-audio']) {
