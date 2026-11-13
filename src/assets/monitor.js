@@ -1,7 +1,7 @@
 /* Error reporting to Sentry. Sends only message, stack, page path and browser.
    Never sends file names or file contents. Off until DSN is set. */
 (() => {
-  const DSN = ''; // e.g. https://PUBLICKEY@oNNNN.ingest.sentry.io/PROJECTID
+  const DSN = 'https://bfcc4230daa064418952610a37ab34a9@o4512424004419584.ingest.de.sentry.io/4512424012218448'; // e.g. https://PUBLICKEY@oNNNN.ingest.sentry.io/PROJECTID
   const m = DSN.match(/^https:\/\/([^@]+)@([^/]+)\/(\d+)$/);
   if (!m) return;
   const [, key, host, project] = m;
