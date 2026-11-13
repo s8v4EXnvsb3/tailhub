@@ -9,23 +9,28 @@
 
   function fill() {
     voices = synth.getVoices();
+    { const nm0 = new Intl.DisplayNames(['en'], { type: 'language' }).of(curLang().split(/[-_]/)[0]); document.querySelectorAll('#guide .gl').forEach((e) => (e.textContent = nm0)); }
     const pref = prefix();
     let list = voices.filter((v) => v.lang.toLowerCase().startsWith(pref));
     if (T.lang === 'en-GB' && !langSel) list = voices.filter((v) => v.lang.replace('_', '-').toLowerCase() === 'en-gb');
     voiceSel.innerHTML = '';
     if (!list.length) {
       voiceSel.innerHTML = '<option value="">Default voice</option>';
-      $('info').textContent = `No ${curLang()} voice is installed on this device. Install one in your OS speech settings, or try Chrome/Edge.`;
+      const nm = new Intl.DisplayNames(['en'], { type: 'language' }).of(curLang().split(/[-_]/)[0]);
+      document.querySelectorAll('#guide .gl').forEach((e) => (e.textContent = nm));
+      $('info').textContent = `No ${nm} (${curLang()}) voice is installed on this device. Follow the guide below to add one.`;
       $('info').classList.add('err');
+      const g = $('guide'); if (g) g.open = true;
       return;
     }
     $('info').textContent = `${list.length} voice${list.length > 1 ? 's' : ''} available.`; $('info').classList.remove('err');
     list.forEach((v) => { const o = document.createElement('option'); o.value = v.name; o.textContent = `${v.name} (${v.lang})`; voiceSel.appendChild(o); });
   }
+  const cp = $('cpset'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText('ms-settings:speech'); cp.textContent = 'Copied'; setTimeout(() => (cp.textContent = 'Copy'), 1200); } catch {} };
   fill(); synth.onvoiceschanged = fill;
   if (langSel) langSel.addEventListener('change', () => { fill(); if (T.samples && T.samples[langSel.value]) $('in').value = T.samples[langSel.value]; });
 
-  $('rate').oninput = (e) => ($('rv').textContent = (+e.target.value).toFixed(1) + '×');
+  $('rate').oninput = (e) => ($('rv').textContent = (+e.target.value).toFixed(1) + 'x');
   $('pitch').oninput = (e) => ($('pv').textContent = (+e.target.value).toFixed(1));
 
   // Chrome stops long utterances after ~15 s, so speak sentence-sized chunks.

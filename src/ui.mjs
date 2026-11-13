@@ -1,11 +1,12 @@
 // Per-tool interface markup. Element ids must match src/assets/utils.js / utils2.js.
+import { ico } from './icons.mjs';
 const ta = (id, ph = '', rows = 8, ro = false) => `<textarea id="${id}" rows="${rows}" placeholder="${ph}" spellcheck="false"${ro ? ' readonly' : ''}></textarea>`;
 const btn = (id, label, cls = '') => `<button class="btn ${cls}" id="${id}">${label}</button>`;
 const lab = (text, inner) => `<label class="fld"><span>${text}</span>${inner}</label>`;
 const chk = (id, text, on = false) => `<label class="chk"><input type="checkbox" id="${id}"${on ? ' checked' : ''}> ${text}</label>`;
 const num = (id, v, extra = '') => `<input type="number" id="${id}" value="${v}" ${extra}>`;
 const sel = (id, opts) => `<select id="${id}">${opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
-const drop = (text, multiple = false, accept = '') => `<div class="drop" id="drop"><input type="file" id="file" hidden${multiple ? ' multiple' : ''}${accept ? ` accept="${accept}"` : ''}><div class="drop-i">⬆</div><p><b>${text}</b><br><span>or drag and drop here</span></p></div>`;
+const drop = (text, multiple = false, accept = '') => `<div class="drop" id="drop"><input type="file" id="file" hidden${multiple ? ' multiple' : ''}${accept ? ` accept="${accept}"` : ''}><div class="drop-i">${ico('upload', 22)}</div><p><b>${text}</b><br><span>or drag and drop here</span></p></div>`;
 const out = (id = 'out') => ta(id, 'Result appears here', 8, true);
 
 export const UI = {
@@ -14,10 +15,10 @@ export const UI = {
   'remove-duplicate-lines': () => `${ta('in', 'One item per line…', 8)}<div class="row">${chk('trim', 'Trim spaces', true)}${chk('empty', 'Remove empty lines', true)}${chk('ci', 'Ignore case')}${chk('sort', 'Sort A–Z')}</div><div class="row">${btn('go', 'Remove duplicates')}${btn('copy', 'Copy result', 'ghost')}</div><p id="info" class="note"></p>${out()}`,
   'text-diff': () => `<div class="two">${ta('a', 'Original text…', 9)}${ta('b', 'Changed text…', 9)}</div><div class="row">${btn('go', 'Compare')}</div><div id="out" class="diffout">Differences appear here.</div>`,
   'find-and-replace': () => `${ta('in', 'Paste your text here…', 8)}<div class="two">${lab('Find', '<input id="find">')}${lab('Replace with', '<input id="rep">')}</div><div class="row">${chk('cs', 'Case sensitive')}${chk('regex', 'Regular expression')}</div><div class="row">${btn('go', 'Replace all')}${btn('copy', 'Copy result', 'ghost')}</div><p id="info" class="note"></p>${out()}`,
-  'text-sorter': () => `${ta('in', 'One item per line…', 8)}<div class="row">${sel('mode', [['az', 'A → Z'], ['za', 'Z → A'], ['len', 'By length'], ['num', 'By number'], ['shuffle', 'Shuffle randomly']])}${btn('go', 'Sort')}${btn('copy', 'Copy result', 'ghost')}</div>${out()}`,
+  'text-sorter': () => `${ta('in', 'One item per line…', 8)}<div class="row">${sel('mode', [['az', 'A to Z'], ['za', 'Z to A'], ['len', 'By length'], ['num', 'By number'], ['shuffle', 'Shuffle randomly']])}${btn('go', 'Sort')}${btn('copy', 'Copy result', 'ghost')}</div>${out()}`,
   'reverse-text': () => `${ta('in', 'Type or paste your text here…', 6)}<div class="row">${btn('rc', 'Reverse characters')}${btn('rw', 'Reverse words', 'ghost')}${btn('rl', 'Reverse lines', 'ghost')}${btn('copy', 'Copy result', 'ghost')}</div>${out()}`,
   'slug-generator': () => `${lab('Title', '<input id="in" placeholder="My Great Blog Post Title!">')}${lab('Slug', '<input id="out" readonly>')}<div class="row">${btn('copy', 'Copy slug', 'ghost')}</div>`,
-  'morse-code-translator': () => `${ta('in', 'Type text, or paste Morse code (. and -)…', 5)}<div class="row">${btn('enc', 'Text → Morse')}${btn('dec', 'Morse → Text', 'ghost')}${btn('play', '▶ Play beeps', 'ghost')}${btn('copy', 'Copy', 'ghost')}</div>${out()}`,
+  'morse-code-translator': () => `${ta('in', 'Type text, or paste Morse code (. and -)…', 5)}<div class="row">${btn('enc', 'Text to Morse')}${btn('dec', 'Morse to Text', 'ghost')}${btn('play', 'Play beeps', 'ghost')}${btn('copy', 'Copy', 'ghost')}</div>${out()}`,
   'binary-text-converter': () => `${ta('in', 'Type text, or paste numbers separated by spaces…', 5)}<div class="row">${sel('base', [[2, 'Binary'], [8, 'Octal'], [10, 'Decimal'], [16, 'Hex']])}${btn('enc', 'Encode')}${btn('dec', 'Decode', 'ghost')}${btn('copy', 'Copy', 'ghost')}</div><p id="info" class="note"></p>${out()}`,
   'json-formatter': () => `${ta('in', '{"paste": "your JSON here"}', 10)}<div class="row">${btn('pretty', 'Format')}${btn('min', 'Minify', 'ghost')}${btn('copy', 'Copy', 'ghost')}</div><p id="info" class="note"></p>${out()}`,
   'base64-encoder-decoder': () => `${ta('in', 'Text or Base64…', 6)}<div class="row">${btn('enc', 'Encode')}${btn('dec', 'Decode', 'ghost')}${btn('copy', 'Copy', 'ghost')}</div><p id="info" class="note"></p>${out()}`,
@@ -30,11 +31,11 @@ export const UI = {
   'timestamp-converter': () => `<div class="two">${lab('Unix timestamp', '<input id="ts" placeholder="1700000000">')}${lab('Or pick a date', '<input type="datetime-local" id="dt">')}</div><div class="row">${btn('now', 'Use current time', 'ghost')}</div><div id="out" class="hashes"></div>`,
   'markdown-previewer': () => `<div class="two">${ta('in', '# Write Markdown…', 16)}<div id="out" class="md"></div></div>`,
   'qr-code-generator': () => `<div class="two"><div>${ta('in', 'https://example.com', 4).replace('<textarea', '<textarea').replace('></textarea>', '>https://tailhub-liard.vercel.app</textarea>')}<div class="two">${lab('Error correction', sel('ecc', [['M', 'Medium'], ['L', 'Low'], ['Q', 'Quartile'], ['H', 'High']]))}${lab('PNG size', sel('size', [[512, '512 px'], [1024, '1024 px'], [2048, '2048 px']]))}</div><div class="row">${btn('png', 'Download PNG')}${btn('svg', 'Download SVG', 'ghost')}</div></div><div id="qr" class="qr"></div></div>`,
-  'password-generator': () => `<div class="pw"><input id="out" readonly>${btn('copy', 'Copy', 'ghost')}${btn('go', '↻ New')}</div><p id="info" class="note"></p>${lab('Length: <b id="lv">16</b>', '<input type="range" id="len" min="6" max="64" value="16">')}<div class="row">${chk('up', 'A–Z', true)}${chk('lo', 'a–z', true)}${chk('nu', '0–9', true)}${chk('sy', 'Symbols', true)}</div>`,
+  'password-generator': () => `<div class="pw"><input id="out" readonly>${btn('copy', 'Copy', 'ghost')}${btn('go', 'New')}</div><p id="info" class="note"></p>${lab('Length: <b id="lv">16</b>', '<input type="range" id="len" min="6" max="64" value="16">')}<div class="row">${chk('up', 'A–Z', true)}${chk('lo', 'a–z', true)}${chk('nu', '0–9', true)}${chk('sy', 'Symbols', true)}</div>`,
   'uuid-generator': () => `<div class="row">${lab('How many', num('n', 5, 'min="1" max="500"'))}${chk('nh', 'No hyphens')}${chk('up', 'Uppercase')}${btn('go', 'Generate')}${btn('copy', 'Copy all', 'ghost')}</div>${out()}`,
   'random-number-generator': () => `<div class="row">${lab('Min', num('min', 1))}${lab('Max', num('max', 100))}${lab('How many', num('n', 1, 'min="1" max="1000"'))}${chk('uniq', 'Unique')}</div><div class="row">${btn('go', 'Generate')}${btn('copy', 'Copy', 'ghost')}</div><p id="info" class="note"></p>${ta('out', '', 4, true)}`,
   'lorem-ipsum-generator': () => `<div class="row">${lab('Amount', num('n', 3, 'min="1" max="100"'))}${lab('Unit', sel('unit', [['p', 'Paragraphs'], ['s', 'Sentences'], ['w', 'Words']]))}${chk('classic', 'Start with “Lorem ipsum”', true)}</div><div class="row">${btn('go', 'Generate')}${btn('copy', 'Copy', 'ghost')}</div>${ta('out', '', 10, true)}`,
-  'unit-converter': () => `<div class="two">${lab('Category', '<select id="cat"></select>')}${lab('Value', num('val', 1, 'step="any"'))}</div><div class="row">${lab('From', '<select id="from"></select>')}${btn('swap', '⇄', 'ghost')}${lab('To', '<select id="to"></select>')}</div><div id="out" class="bigout">—</div>`,
+  'unit-converter': () => `<div class="two">${lab('Category', '<select id="cat"></select>')}${lab('Value', num('val', 1, 'step="any"'))}</div><div class="row">${lab('From', '<select id="from"></select>')}${btn('swap', 'Swap', 'ghost')}${lab('To', '<select id="to"></select>')}</div><div id="out" class="bigout">—</div>`,
   'percentage-calculator': () => `<div class="calc"><span>What is</span>${num('p1a', 15, 'step="any"')}<span>% of</span>${num('p1b', 200, 'step="any"')}<span>?</span><b id="r1" class="res-n"></b></div><div class="calc">${num('p2a', 30, 'step="any"')}<span>is what % of</span>${num('p2b', 120, 'step="any"')}<span>?</span><b id="r2" class="res-n"></b></div><div class="calc"><span>Change from</span>${num('p3a', 80, 'step="any"')}<span>to</span>${num('p3b', 100, 'step="any"')}<span>=</span><b id="r3" class="res-n"></b></div>`,
   'age-calculator': () => `<div class="two">${lab('Date of birth', '<input type="date" id="dob">')}${lab('Age at date', '<input type="date" id="at">')}</div><div id="out"></div>`,
   'bmi-calculator': () => `<div class="two">${lab('Units', sel('sys', [['met', 'Metric (cm, kg)'], ['imp', 'Imperial (in, lb)']]))}<span></span>${lab('<span id="hl">Height (cm)</span>', num('h', 170, 'step="any"'))}${lab('<span id="wl">Weight (kg)</span>', num('w', 65, 'step="any"'))}</div><div id="out"></div>`,
@@ -48,7 +49,7 @@ export const UI = {
   'pdf-split': () => `${drop('Choose a PDF', false, 'application/pdf,.pdf')}<p id="fname" class="note"></p>${lab('Pages to keep (e.g. 1-3, 5, 8-)', '<input id="pages" value="1">')}<div class="row">${btn('go', 'Extract pages').replace('<button', '<button disabled')}</div><p id="info" class="note"></p>`,
   'image-to-base64': () => `${drop('Choose an image', false, 'image/*')}<img id="prev" hidden class="prev" alt="">${chk('raw', 'Raw Base64 (no data: prefix)')}<p id="info" class="note"></p>${out()}<div class="row">${btn('copy', 'Copy', 'ghost')}</div>`,
   'color-converter': () => `<div class="two"><div id="sw" class="swatch"></div><div>${lab('Pick', '<input type="color" id="pick">')}</div></div>${['hex', 'rgb', 'hsl'].map((k) => `<div class="pw">${lab(k.toUpperCase(), `<input id="${k}">`)}<button class="btn ghost" data-cp="${k}">Copy</button></div>`).join('')}`,
-  'css-gradient-generator': () => `<div id="prev" class="swatch big"></div><div class="row">${lab('Color 1', '<input type="color" id="c1" value="#7c5cff">')}${lab('Color 2', '<input type="color" id="c2" value="#22d3ee">')}${lab('Type', sel('type', [['linear', 'Linear'], ['radial', 'Radial']]))}${lab('Angle: <b id="av">135°</b>', '<input type="range" id="ang" min="0" max="360" value="135">')}</div>${ta('out', '', 2, true)}<div class="row">${btn('copy', 'Copy CSS', 'ghost')}</div>`,
+  'css-gradient-generator': () => `<div id="prev" class="swatch big"></div><div class="row">${lab('Color 1', '<input type="color" id="c1" value="#e8590c">')}${lab('Color 2', '<input type="color" id="c2" value="#1d4ed8">')}${lab('Type', sel('type', [['linear', 'Linear'], ['radial', 'Radial']]))}${lab('Angle: <b id="av">135°</b>', '<input type="range" id="ang" min="0" max="360" value="135">')}</div>${ta('out', '', 2, true)}<div class="row">${btn('copy', 'Copy CSS', 'ghost')}</div>`,
 };
 
 // Interface for ffmpeg-based tools
@@ -62,6 +63,24 @@ export function ffmpegUI(t) {
 }
 
 export function ttsUI(t) {
-  const langs = t.multi ? `${lab('Language', `<select id="lang">${t.multi.map((l) => `<option value="${l}">${new Intl.DisplayNames(['en'], { type: 'language' }).of(l.replace('_', '-'))} (${l})</option>`).join('')}</select>`)}` : '';
-  return `${langs}${lab('Text', `<textarea id="in" rows="8" ${/he|ar|ur/.test(t.lang) ? 'dir="auto"' : ''}>${t.sample}</textarea>`)}<div class="two">${lab('Voice', '<select id="voice"></select>')}<div>${lab('Speed: <b id="rv">1.0×</b>', '<input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">')}${lab('Pitch: <b id="pv">1.0</b>', '<input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">')}</div></div><div class="row">${btn('play', '▶ Speak')}${btn('pause', 'Pause', 'ghost')}${btn('stop', 'Stop', 'ghost')}</div><p id="info" class="note"></p>`;
+  const dn = new Intl.DisplayNames(['en'], { type: 'language' });
+  const name = t.multi ? 'your language' : dn.of(t.lang.split(/[-_]/)[0]);
+  const langs = t.multi ? `${lab('Language', `<select id="lang">${t.multi.map((l) => `<option value="${l}">${dn.of(l.replace('_', '-'))} (${l})</option>`).join('')}</select>`)}` : '';
+  const guide = `<details class="guide" id="guide"><summary>No ${t.multi ? 'voice for your language' : name + ' voice'}? How to add one</summary>
+<p>This tool speaks with the voices installed on your device, so the text never leaves your computer. If the voice list is empty or says <b>${t.multi ? 'no voice is installed' : 'No ' + t.lang + ' voice'}</b>, add a <b class="gl">${name}</b> voice:</p>
+<h3>Windows 10 and 11</h3>
+<ol><li>Press <kbd>Win</kbd> + <kbd>R</kbd>, paste <code>ms-settings:speech</code> and press Enter. <button type="button" class="btn ghost sm" id="cpset">Copy</button></li>
+<li>Under <b>Manage voices</b>, click <b>Add voices</b>.</li>
+<li>Search for <b class="gl">${name}</b>, tick it and click <b>Add</b>. Wait for the download to finish.</li>
+<li>Close the browser completely, reopen it and reload this page.</li></ol>
+<h3>Easiest option: Microsoft Edge</h3>
+<p>Edge includes many free <b>Online (Natural)</b> voices for <span class="gl">${name}</span>. Nothing to install, but you need an internet connection. Open this page in Edge and pick a voice marked "Online (Natural)".</p>
+<h3>macOS</h3>
+<p>System Settings, then Accessibility, then Spoken Content. Open <b>System Voice</b>, choose <b>Manage Voices</b>, find <span class="gl">${name}</span> and download one.</p>
+<h3>Android</h3>
+<p>Settings, then System, then Languages &amp; input, then Text-to-speech output. Open the engine's settings, choose <b>Install voice data</b> and select <span class="gl">${name}</span>. Chrome on Android usually has voices already.</p>
+<h3>iPhone and iPad</h3>
+<p>Settings, then Accessibility, then Spoken Content, then Voices. Choose <span class="gl">${name}</span> and download a voice.</p>
+<p class="muted">After installing, restart the browser. If the voice still does not show, try Edge or Chrome.</p></details>`;
+  return `${langs}${lab('Text', `<textarea id="in" rows="8" ${/he|ar|ur/.test(t.lang) ? 'dir="auto"' : ''}>${t.sample}</textarea>`)}<div class="two">${lab('Voice', '<select id="voice"></select>')}<div>${lab('Speed: <b id="rv">1.0x</b>', '<input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">')}${lab('Pitch: <b id="pv">1.0</b>', '<input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">')}</div></div><div class="row">${btn('play', 'Speak')}${btn('pause', 'Pause', 'ghost')}${btn('stop', 'Stop', 'ghost')}</div><p id="info" class="note"></p>${guide}`;
 }

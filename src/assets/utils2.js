@@ -4,7 +4,7 @@
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   const fmtB = (b) => (b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : (b / 1024).toFixed(1) + ' KB');
-  const copyBtn = () => { const b = $('copy'); if (!b) return; b.onclick = async () => { const o = $('out'); await navigator.clipboard.writeText(o.value ?? o.textContent); const t = b.textContent; b.textContent = 'Copied ✓'; setTimeout(() => (b.textContent = t), 1200); }; };
+  const copyBtn = () => { const b = $('copy'); if (!b) return; b.onclick = async () => { const o = $('out'); await navigator.clipboard.writeText(o.value ?? o.textContent); const t = b.textContent; b.textContent = 'Copied'; setTimeout(() => (b.textContent = t), 1200); }; };
   const wireDrop = (onFiles) => {
     const d = $('drop'), f = $('file');
     d.onclick = () => f.click(); f.onchange = () => { onFiles([...f.files]); f.value = ''; };
@@ -80,7 +80,7 @@
       $('hashes').innerHTML = algos.map((a) => `<div class="hrow"><b>${a}</b><code id="h-${a}"></code><button class="btn ghost" data-a="${a}">Copy</button></div>`).join('');
       const run = async () => { const d = new TextEncoder().encode($('in').value); for (const a of algos) { const h = await crypto.subtle.digest(a, d); $('h-' + a).textContent = [...new Uint8Array(h)].map((x) => x.toString(16).padStart(2, '0')).join(''); } };
       $('in').oninput = run; run();
-      $('hashes').onclick = async (e) => { const b = e.target.closest('button'); if (!b) return; await navigator.clipboard.writeText($('h-' + b.dataset.a).textContent); b.textContent = 'Copied ✓'; setTimeout(() => (b.textContent = 'Copy'), 1200); };
+      $('hashes').onclick = async (e) => { const b = e.target.closest('button'); if (!b) return; await navigator.clipboard.writeText($('h-' + b.dataset.a).textContent); b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1200); };
     },
     'jwt-decoder'() {
       const dec = (s) => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0))));
@@ -257,7 +257,7 @@
     },
     'image-to-pdf'() {
       let files = [];
-      const render = () => { $('list').innerHTML = files.map((f, i) => `<li><span>${i + 1}. ${esc(f.name)} · ${fmtB(f.size)}</span><button data-u="${i}">↑</button><button data-d="${i}">↓</button><button data-x="${i}">✕</button></li>`).join(''); $('go').disabled = !files.length; note(files.length ? `${files.length} image${files.length > 1 ? 's' : ''} ready.` : 'Add at least one image.'); };
+      const render = () => { $('list').innerHTML = files.map((f, i) => `<li><span>${i + 1}. ${esc(f.name)} · ${fmtB(f.size)}</span><button data-u="${i}">Up</button><button data-d="${i}">Down</button><button data-x="${i}">Remove</button></li>`).join(''); $('go').disabled = !files.length; note(files.length ? `${files.length} image${files.length > 1 ? 's' : ''} ready.` : 'Add at least one image.'); };
       wireDrop((fs) => { files.push(...fs.filter((f) => /^image\/(jpeg|png|webp|gif|bmp)/.test(f.type))); render(); });
       $('list').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const d = b.dataset; if (d.x != null) files.splice(+d.x, 1); else if (d.u != null && +d.u > 0) [files[+d.u - 1], files[+d.u]] = [files[+d.u], files[+d.u - 1]]; else if (d.d != null && +d.d < files.length - 1) [files[+d.d + 1], files[+d.d]] = [files[+d.d], files[+d.d + 1]]; render(); };
       $('go').onclick = async () => {
@@ -271,7 +271,7 @@
             const page = pdf.addPage([pw, ph]), s = Math.min(pw / img.width, ph / img.height), w = img.width * s, h = img.height * s;
             page.drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
           }
-          const out = await pdf.save(); dl(new Blob([out], { type: 'application/pdf' }), 'images.pdf'); note(`✓ Created a ${files.length}-page PDF (${fmtB(out.length)}).`, 'ok');
+          const out = await pdf.save(); dl(new Blob([out], { type: 'application/pdf' }), 'images.pdf'); note(`Created a ${files.length}-page PDF (${fmtB(out.length)}).`, 'ok');
         } catch (e) { note('Could not build the PDF: ' + e.message, 'err'); }
         $('go').disabled = !files.length;
       };
@@ -286,7 +286,7 @@
           for (const part of $('pages').value.split(',').map((x) => x.trim()).filter(Boolean)) { const m = part.match(/^(\d*)\s*-\s*(\d*)$/); if (m) { const a = +m[1] || 1, b = +m[2] || total; for (let i = a; i <= Math.min(b, total); i++) idx.push(i - 1); } else if (/^\d+$/.test(part) && +part >= 1 && +part <= total) idx.push(+part - 1); else throw new Error(`"${part}" is not a valid page or range (the PDF has ${total} pages).`); }
           if (!idx.length) throw new Error('Enter at least one page.');
           const out = await PDFLib.PDFDocument.create(); (await out.copyPages(src, idx)).forEach((p) => out.addPage(p));
-          const bytes = await out.save(); dl(new Blob([bytes], { type: 'application/pdf' }), file.name.replace(/\.pdf$/i, '') + '-pages.pdf'); note(`✓ Extracted ${idx.length} page${idx.length > 1 ? 's' : ''} from ${total}.`, 'ok');
+          const bytes = await out.save(); dl(new Blob([bytes], { type: 'application/pdf' }), file.name.replace(/\.pdf$/i, '') + '-pages.pdf'); note(`Extracted ${idx.length} page${idx.length > 1 ? 's' : ''} from ${total}.`, 'ok');
         } catch (e) { note(e.message, 'err'); }
       };
     },
@@ -306,8 +306,8 @@
       $('hex').oninput = () => { const r = hex2rgb($('hex').value.trim()); if (r) set(r, 'hex'); };
       $('rgb').oninput = () => { const m = $('rgb').value.match(/\d+/g); if (m && m.length >= 3 && m.slice(0, 3).every((x) => +x <= 255)) set(m.slice(0, 3).map(Number), 'rgb'); };
       $('hsl').oninput = () => { const m = $('hsl').value.match(/\d+/g); if (m && m.length >= 3 && +m[0] <= 360 && +m[1] <= 100 && +m[2] <= 100) set(hsl2rgb(+m[0], +m[1], +m[2]), 'hsl'); };
-      document.querySelectorAll('[data-cp]').forEach((b) => (b.onclick = async () => { await navigator.clipboard.writeText($(b.dataset.cp).value); b.textContent = 'Copied ✓'; setTimeout(() => (b.textContent = 'Copy'), 1200); }));
-      set(hex2rgb('#7c5cff'));
+      document.querySelectorAll('[data-cp]').forEach((b) => (b.onclick = async () => { await navigator.clipboard.writeText($(b.dataset.cp).value); b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1200); }));
+      set(hex2rgb('#e8590c'));
     },
     'css-gradient-generator'() {
       const run = () => { const g = $('type').value === 'linear' ? `linear-gradient(${$('ang').value}deg, ${$('c1').value}, ${$('c2').value})` : `radial-gradient(circle, ${$('c1').value}, ${$('c2').value})`; $('av').textContent = $('ang').value + '°'; $('prev').style.background = g; $('out').value = `background: ${g};`; };

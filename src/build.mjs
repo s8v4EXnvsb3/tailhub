@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { tools, categories, featured } from './tools.mjs';
 import { buildPost, postTitle } from './content.mjs';
 import { UI, ffmpegUI, ttsUI } from './ui.mjs';
+import { ico, toolIcon, catIcon } from './icons.mjs';
 
 const SITE = 'TailHub';
 const URL_BASE = process.env.SITE_URL || 'https://tailhub-liard.vercel.app';
@@ -36,17 +37,17 @@ const themeBoot = `<script>try{var t=localStorage.getItem('th-theme')||(matchMed
 function sidebar(activePath) {
   const groups = categories.map((c) => {
     const items = tools.filter((t) => t.category === c.id);
-    return `<details><summary><span>${c.icon}</span>${esc(c.name)}<span class="n">${items.length}</span></summary>${items.map((t) => `<a class="lk${toolUrl(t) === activePath ? ' on' : ''}" href="${toolUrl(t)}" data-q="${esc(keyOf(t))}">${esc(t.title)}</a>`).join('')}</details>`;
+    return `<details><summary>${catIcon(c, 16)}<span>${esc(c.name)}</span><span class="n">${items.length}</span></summary>${items.map((t) => `<a class="lk${toolUrl(t) === activePath ? ' on' : ''}" href="${toolUrl(t)}" data-q="${esc(keyOf(t))}">${esc(t.title)}</a>`).join('')}</details>`;
   }).join('');
-  return `<aside class="side" aria-label="All tools"><div class="side-h"><a class="brand" href="/"><span class="logo">🪝</span><span>Tail<em>Hub</em></span></a><input class="sq" type="search" placeholder="Search ${tools.length} tools…  ( / )" aria-label="Search tools"></div><nav class="nav-top"><a href="/"${activePath === '/' ? ' class="on"' : ''}>Home</a><a href="/blog/"${activePath.startsWith('/blog') ? ' class="on"' : ''}>Blog</a></nav><div class="side-s">${groups}</div><div class="side-f"><span>${tools.length} free tools</span><span>No uploads</span></div></aside><div class="shade"></div>`;
+  return `<aside class="side" aria-label="All tools"><div class="side-h"><a class="brand" href="/"><span class="logo">${ico('layout-grid', 18)}</span><span>Tail<em>Hub</em></span></a><input class="sq" type="search" placeholder="Search ${tools.length} tools…  ( / )" aria-label="Search tools"></div><nav class="nav-top"><a href="/"${activePath === '/' ? ' class="on"' : ''}>Home</a><a href="/blog/"${activePath.startsWith('/blog') ? ' class="on"' : ''}>Blog</a></nav><div class="side-s">${groups}</div><div class="side-f"><span>${tools.length} free tools</span><span>No uploads</span></div></aside><div class="shade"></div>`;
 }
 
 function page({ title, desc, path: p, body, scripts = '', head = '', activePath }) {
   const full = title.includes(SITE) ? title : `${title} | ${SITE}`;
-  return `<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(full)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${URL_BASE}${p}"><meta property="og:title" content="${esc(full)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:type" content="website"><meta name="theme-color" content="#7c5cff"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪝%3C/text%3E%3C/svg%3E">${themeBoot}<link rel="stylesheet" href="/assets/style.css">${head}</head><body>${sidebar(activePath ?? p)}<div class="wrap"><header class="top"><button class="ib burger" aria-label="Open menu">☰</button><a class="brand" href="/"><span class="logo">🪝</span><span>Tail<em>Hub</em></span></a><span class="sp"></span><a class="ib" href="/blog/" aria-label="Blog" title="Blog">📖</a><button class="ib tt" aria-label="Toggle light / dark mode" title="Toggle light / dark mode"><span class="moon">🌙</span><span class="sun">☀️</span></button></header><main>${body}</main><footer><span>© ${new Date().getFullYear()} ${SITE}. Free online tools that run in your browser. Your files never leave your device.</span><span><a href="/">Tools</a> · <a href="/blog/">Blog</a></span></footer></div><script src="/assets/site.js"></script>${scripts}</body></html>`;
+  return `<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(full)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${URL_BASE}${p}"><meta property="og:title" content="${esc(full)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:type" content="website"><meta name="theme-color" content="#0e0e0f"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e8590c'/%3E%3Cpath d='M9 10h14M16 10v13' stroke='white' stroke-width='3.2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">${themeBoot}<link rel="stylesheet" href="/assets/style.css">${head}</head><body>${sidebar(activePath ?? p)}<div class="wrap"><header class="top"><button class="ib burger" aria-label="Open menu">${ico('menu')}</button><a class="brand" href="/"><span class="logo">${ico('layout-grid', 18)}</span><span>Tail<em>Hub</em></span></a><span class="sp"></span><a class="ib" href="/blog/" aria-label="Blog" title="Blog">${ico('book-open')}</a><button class="ib tt" aria-label="Toggle light / dark mode" title="Toggle light / dark mode"><span class="moon">${ico('moon')}</span><span class="sun">${ico('sun')}</span></button></header><main>${body}</main><footer><span>© ${new Date().getFullYear()} ${SITE}. Free online tools that run in your browser. Your files never leave your device.</span><span><a href="/">Tools</a> · <a href="/blog/">Blog</a></span></footer></div><script src="/assets/site.js"></script>${scripts}</body></html>`;
 }
 
-const card = (t) => `<a class="card" href="${toolUrl(t)}" data-q="${esc(keyOf(t))}" style="--h:${cat[t.category].hue}"><span class="ic">${t.icon}</span><span><b>${esc(t.title)}</b><span class="d">${esc(t.desc)}</span></span></a>`;
+const card = (t) => `<a class="card" href="${toolUrl(t)}" data-q="${esc(keyOf(t))}"><span class="ic">${toolIcon(t)}</span><span><b>${esc(t.title)}</b><span class="d">${esc(t.desc)}</span></span></a>`;
 
 // ------------------------------------------------------------------ tool pages
 function toolBody(t) {
@@ -60,11 +61,11 @@ function toolBody(t) {
     ...(t.kind === 'tts' ? [['Why can I not find a voice?', 'Voices come from your operating system and browser. Install the language in your system speech settings, or try Chrome or Edge.']] : []),
   ];
   const ld = { '@context': 'https://schema.org', '@type': 'WebApplication', name: t.title, description: t.desc, url: URL_BASE + toolUrl(t), applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } };
-  return `<div class="crumbs"><a href="/">Home</a> › ${esc(cat[t.category].name)} › ${esc(t.title)}</div>
-<div class="th"><span class="ic">${t.icon}</span><div><h1>${esc(t.title)}</h1></div></div><p class="lead">${esc(t.desc)}</p>
-<div class="badges"><span class="badge">🔒 Private</span><span class="badge">⚡ No sign-up</span><span class="badge">🆓 Free forever</span></div>
+  return `<div class="crumbs"><a href="/">Home</a> / ${esc(cat[t.category].name)} / ${esc(t.title)}</div>
+<div class="th"><span class="ic">${toolIcon(t)}</span><div><h1>${esc(t.title)}</h1></div></div><p class="lead">${esc(t.desc)}</p>
+<div class="badges"><span class="badge">${ico('lock', 14)}Runs in your browser</span><span class="badge">${ico('user-x', 14)}No sign-up</span><span class="badge">${ico('badge-check', 14)}Free</span></div>
 <section class="panel">${ui}</section>
-<section class="sec"><h2>How to use ${esc(t.title)}</h2><ol>${post.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol><p><a href="${postUrl(t)}" class="grad"><b>Read the full guide →</b></a></p></section>
+<section class="sec"><h2>How to use ${esc(t.title)}</h2><ol>${post.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol><p><a href="${postUrl(t)}" class="lnk"><b>Read the full guide</b>${ico('arrow-right', 15)}</a></p></section>
 <section class="sec"><h2>Frequently asked questions</h2>${faqs.map(([q, a]) => `<details class="faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</section>
 <section class="sec"><h2>Related tools</h2><div class="grid">${related.map(card).join('')}</div></section>
 <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
@@ -86,37 +87,36 @@ for (const t of tools) {
 function postBody(t) {
   const p = buildPost(t), title = postTitle(t);
   const related = tools.filter((x) => x.category === t.category && x.slug !== t.slug).slice(0, 4);
-  return `<article class="post"><div class="crumbs"><a href="/">Home</a> › <a href="/blog/">Blog</a> › ${esc(t.title)}</div>
+  return `<article class="post"><div class="crumbs"><a href="/">Home</a> / <a href="/blog/">Blog</a> / ${esc(t.title)}</div>
 <h1>${esc(title)}</h1><div class="meta">${esc(cat[t.category].name)} · Updated ${DATE} · ${Math.max(2, Math.round((p.about.length + p.steps.join('').length + p.tips.join('').length) / 900))} min read</div>
 <p><b>${esc(t.desc)}</b></p>
-<div class="tcta"><div><b>${t.icon} ${esc(t.title)}</b><br><span style="color:var(--mut)">Free, private, no sign-up.</span></div><a class="btn" href="${toolUrl(t)}">Open the tool</a></div>
+<div class="tcta"><div><b>${esc(t.title)}</b><br><span style="color:var(--mut)">Free, private, no sign-up.</span></div><a class="btn" href="${toolUrl(t)}">Open the tool</a></div>
 <h2>What is it?</h2><p>${esc(p.about)}</p>
 <h2>How to use ${esc(t.title)}</h2><ol>${p.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
 <h2>Tips for better results</h2><ul>${p.tips.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
 <h2>Common uses</h2><ul>${p.uses.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
 <h2>Is it private?</h2><p>${t.kind === 'tts' ? 'Yes. The speech is produced by voices already installed on your device, so your text is never sent to a server.' : 'Yes. TailHub tools run entirely in your browser using modern web technology. Your files and text never leave your device, and nothing is stored.'}</p>
-<div class="tcta"><div><b>Ready to try it?</b></div><a class="btn" href="${toolUrl(t)}">Use ${esc(t.title)} →</a></div>
+<div class="tcta"><div><b>Ready to try it?</b></div><a class="btn" href="${toolUrl(t)}">Use ${esc(t.title)}</a></div>
 <h2>More guides</h2><div class="grid">${related.map((r) => `<a class="pcard" href="${postUrl(r)}"><b>${esc(r.title)}</b><span>${esc(r.desc)}</span></a>`).join('')}</div></article>
 <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: title, datePublished: DATE, dateModified: DATE, author: { '@type': 'Organization', name: SITE }, mainEntityOfPage: URL_BASE + postUrl(t) })}</script>`;
 }
 for (const t of tools) write(`blog/${t.slug}/index.html`, page({ title: postTitle(t), desc: `${t.desc} A short guide with steps, tips and common uses.`, path: postUrl(t), body: postBody(t) }));
 
-const blogIndex = `<div class="hero" style="padding:40px 20px 28px"><span class="pill">📖 Guides</span><h1>The ${SITE} <span class="grad">Blog</span></h1><p>Practical, plain-English guides for every tool: what it does, how to use it and how to get the best result.</p></div>${categories.map((c) => `<div class="shead"><div><h2>${c.icon} ${esc(c.name)}</h2></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map((t) => `<a class="pcard" href="${postUrl(t)}"><b>${esc(postTitle(t))}</b><span>${esc(t.desc)}</span><small>Read guide →</small></a>`).join('')}</div>`).join('')}`;
+const blogIndex = `<div class="hero slim"><h1>The ${SITE} blog</h1><p>Practical, plain-English guides for every tool: what it does, how to use it and how to get the best result.</p></div>${categories.map((c) => `<div class="shead"><div><h2>${catIcon(c)}${esc(c.name)}</h2></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map((t) => `<a class="pcard" href="${postUrl(t)}"><b>${esc(postTitle(t))}</b><span>${esc(t.desc)}</span><small>Read guide</small></a>`).join('')}</div>`).join('')}`;
 write('blog/index.html', page({ title: 'Blog: Guides for Free Online Tools', desc: `Guides for all ${tools.length} free ${SITE} tools: converters, text to speech, PDF, image, developer and calculator tools.`, path: '/blog/', body: blogIndex }));
 
 // ------------------------------------------------------------------ landing page
 const feat = featured.map((s) => bySlug[s]).filter(Boolean);
-const landing = `<section class="hero"><span class="pill">✨ ${tools.length} free tools · no sign-up · no uploads</span>
-<h1>Every everyday tool,<br><span class="grad">one tidy hub.</span></h1>
-<p>Convert audio and video, read text aloud in 26 languages, work with PDFs and images, and more. Everything runs privately in your browser.</p>
-<div class="search"><input id="q" type="search" placeholder="Search tools: mp3, pdf, qr, password…" autofocus aria-label="Search tools"></div>
-<div class="kpis"><span class="kpi"><b>${tools.length}</b> tools</span><span class="kpi"><b>${categories.length}</b> categories</span><span class="kpi"><b>0</b> uploads</span><span class="kpi"><b>100%</b> free</span></div></section>
-<div class="chips landing-only">${categories.map((c) => `<a class="chip" href="#${c.id}">${c.icon} ${esc(c.name)}</a>`).join('')}</div>
-<section class="landing-only"><div class="shead"><div><h2>⭐ Popular right now</h2><p>The tools people reach for most.</p></div></div><div class="grid">${feat.map(card).join('')}</div></section>
+const landing = `<section class="hero"><h1>Free online tools that run in your browser.</h1>
+<p>${tools.length} tools for converting audio and video, reading text aloud, working with PDFs and images, and everyday calculations. No account, no uploads: your files stay on your device.</p>
+<div class="search">${ico('search', 18)}<input id="q" type="search" placeholder="Search ${tools.length} tools, e.g. mp3, pdf, qr, password" autofocus aria-label="Search tools"></div>
+<p class="facts"><span>${tools.length} tools</span><span>${categories.length} categories</span><span>Free, no sign-up</span></p></section>
+<div class="chips landing-only">${categories.map((c) => `<a class="chip" href="#${c.id}">${catIcon(c)}${esc(c.name)}</a>`).join('')}</div>
+<section class="landing-only"><div class="shead"><div><h2>Popular</h2><p>The tools people reach for most.</p></div></div><div class="grid">${feat.map(card).join('')}</div></section>
 <p id="none" class="note" hidden style="text-align:center;font-size:17px;padding:40px">No tools match your search.</p>
-${categories.map((c) => `<section class="cat" id="${c.id}"><div class="shead"><div><h2>${c.icon} ${esc(c.name)}</h2><p>${esc(c.blurb)}</p></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map(card).join('')}</div></section>`).join('')}
-<section class="landing-only"><div class="shead"><div><h2>How it works</h2></div></div><div class="steps"><div class="step"><i>1️⃣</i><b>Pick a tool</b><p>Use the sidebar or search to find what you need.</p></div><div class="step"><i>2️⃣</i><b>Add your file or text</b><p>Drop it in. It is processed by your own browser.</p></div><div class="step"><i>3️⃣</i><b>Download the result</b><p>Nothing is uploaded, stored or tracked.</p></div></div></section>
-<section class="landing-only"><div class="shead"><div><h2>From the blog</h2><p>Guides for getting the most from each tool.</p></div><a href="/blog/" class="grad"><b>All guides →</b></a></div><div class="grid">${feat.slice(0, 4).map((t) => `<a class="pcard" href="${postUrl(t)}"><b>${esc(postTitle(t))}</b><span>${esc(t.desc)}</span><small>Read guide →</small></a>`).join('')}</div></section>
+${categories.map((c) => `<section class="cat" id="${c.id}"><div class="shead"><div><h2>${catIcon(c)}${esc(c.name)}</h2><p>${esc(c.blurb)}</p></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map(card).join('')}</div></section>`).join('')}
+<section class="landing-only"><div class="shead"><div><h2>How it works</h2></div></div><div class="steps"><div class="step"><i>01</i><b>Pick a tool</b><p>Use the sidebar or search to find what you need.</p></div><div class="step"><i>02</i><b>Add your file or text</b><p>Drop it in. It is processed by your own browser.</p></div><div class="step"><i>03</i><b>Download the result</b><p>Nothing is uploaded, stored or tracked.</p></div></div></section>
+<section class="landing-only"><div class="shead"><div><h2>From the blog</h2><p>Guides for getting the most from each tool.</p></div><a href="/blog/" class="lnk"><b>All guides</b>${ico('arrow-right', 15)}</a></div><div class="grid">${feat.slice(0, 4).map((t) => `<a class="pcard" href="${postUrl(t)}"><b>${esc(postTitle(t))}</b><span>${esc(t.desc)}</span><small>Read guide</small></a>`).join('')}</div></section>
 <section class="cta landing-only"><h2>Private by design</h2><p style="color:var(--mut);max-width:560px;margin:0 auto">TailHub runs on your device using WebAssembly and modern browser APIs. There are no accounts, no servers processing your files and no limits.</p></section>
 <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: SITE, url: URL_BASE })}</script>`;
 write('index.html', page({ title: `${SITE}: ${tools.length} Free Online Tools That Run in Your Browser`, desc: `${tools.length} free tools: MP3 and video converters, text to speech, PDF and image tools, calculators and developer utilities. Private and no sign-up.`, path: '/', body: landing }));
@@ -126,4 +126,4 @@ write('404.html', page({ title: 'Page not found', desc: 'Page not found', path: 
 const urls = ['/', '/blog/', ...tools.flatMap((t) => [toolUrl(t), postUrl(t)])];
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${URL_BASE}${u}</loc><lastmod>${DATE}</lastmod></url>`).join('')}</urlset>`);
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${URL_BASE}/sitemap.xml\n`);
-console.log(`Built ${tools.length} tools + ${tools.length} blog posts → dist/`);
+console.log(`Built ${tools.length} tools + ${tools.length} blog posts -> dist/`);

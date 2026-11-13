@@ -1,6 +1,6 @@
 (() => {
   const T = window.TOOL, $ = (id) => document.getElementById(id);
-  const copy = () => $('copy') && ($('copy').onclick = async () => { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied ✓'; setTimeout(() => ($('copy').textContent = 'Copy result'), 1200); });
+  const copy = () => $('copy') && ($('copy').onclick = async () => { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied'; setTimeout(() => ($('copy').textContent = 'Copy result'), 1200); });
   const note = (msg, cls = '') => { const i = $('info'); i.textContent = msg; i.className = 'note ' + cls; };
   const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   const fmt = (b) => (b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : (b / 1024).toFixed(1) + ' KB');
@@ -78,16 +78,17 @@
         const n = Math.min(100, Math.max(1, +$('n').value || 1)), u = $('unit').value; let out;
         if (u === 'p') out = Array.from({ length: n }, para).join('\n\n');
         else if (u === 's') out = Array.from({ length: n }, sent).join(' ');
-        else out = Array.from({ length: n }, r).join(' ');
-        if ($('classic').checked) out = 'Lorem ipsum dolor sit amet, ' + out.charAt(0).toLowerCase() + out.slice(1);
+        else out = Array.from({ length: n }, (_, i) => ($('classic').checked && i < W.length ? W[i] : r())).join(' ');
+        if ($('classic').checked && u === 'w') out = out.charAt(0).toUpperCase() + out.slice(1);
+        else if ($('classic').checked) out = 'Lorem ipsum dolor sit amet, ' + out.charAt(0).toLowerCase() + out.slice(1);
         $('out').value = out;
       };
       $('go').click(); copy();
     },
     'json-formatter'() {
-      const run = (min) => { try { const o = JSON.parse($('in').value); $('out').value = min ? JSON.stringify(o) : JSON.stringify(o, null, 2); note('✓ Valid JSON', 'ok'); } catch (e) { $('out').value = ''; note('✗ ' + e.message, 'err'); } };
+      const run = (min) => { try { const o = JSON.parse($('in').value); $('out').value = min ? JSON.stringify(o) : JSON.stringify(o, null, 2); note('Valid JSON', 'ok'); } catch (e) { $('out').value = ''; note('' + e.message, 'err'); } };
       $('pretty').onclick = () => run(false); $('min').onclick = () => run(true);
-      $('copy').onclick = async () => { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied ✓'; setTimeout(() => ($('copy').textContent = 'Copy'), 1200); };
+      $('copy').onclick = async () => { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied'; setTimeout(() => ($('copy').textContent = 'Copy'), 1200); };
     },
     'base64-encoder-decoder'() {
       $('enc').onclick = () => { const b = new TextEncoder().encode($('in').value); let s = ''; b.forEach((x) => (s += String.fromCharCode(x))); $('out').value = btoa(s); note('Encoded.', 'ok'); };
@@ -133,7 +134,7 @@
     'pdf-merge'() {
       let files = [];
       const render = () => {
-        $('list').innerHTML = files.map((f, i) => `<li><span>${i + 1}. ${esc(f.name)} · ${fmt(f.size)}</span><button data-u="${i}">↑</button><button data-d="${i}">↓</button><button data-x="${i}">✕</button></li>`).join('');
+        $('list').innerHTML = files.map((f, i) => `<li><span>${i + 1}. ${esc(f.name)} · ${fmt(f.size)}</span><button data-u="${i}">Up</button><button data-d="${i}">Down</button><button data-x="${i}">Remove</button></li>`).join('');
         $('go').disabled = files.length < 2; note(files.length < 2 ? 'Add at least 2 PDFs.' : `${files.length} files ready.`);
       };
       wireDrop((fs) => { files.push(...fs.filter((f) => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name))); render(); });
@@ -147,7 +148,7 @@
         try {
           const out = await PDFLib.PDFDocument.create();
           for (const f of files) { const src = await PDFLib.PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true }); (await out.copyPages(src, src.getPageIndices())).forEach((p) => out.addPage(p)); }
-          const bytes = await out.save(); dl(new Blob([bytes], { type: 'application/pdf' }), 'merged.pdf'); note(`✓ Merged ${out.getPageCount()} pages (${fmt(bytes.length)}).`, 'ok');
+          const bytes = await out.save(); dl(new Blob([bytes], { type: 'application/pdf' }), 'merged.pdf'); note(`Merged ${out.getPageCount()} pages (${fmt(bytes.length)}).`, 'ok');
         } catch (e) { note('Could not merge — one of the files may be corrupted or password-protected.', 'err'); }
         $('go').disabled = files.length < 2;
       };

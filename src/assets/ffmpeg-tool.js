@@ -97,11 +97,11 @@ go.addEventListener('click', async () => {
     const url = URL.createObjectURL(blob);
     const isGif = mime === 'image/gif', isVideo = mime.startsWith('video'), isAudio = mime.startsWith('audio') && !mime.includes('m4r');
     const saved = file.size ? Math.round((1 - blob.size / file.size) * 100) : 0;
-    done.innerHTML = `<b>✅ Done — ${name} (${fmtMB(blob.size)})</b>${T.mode.startsWith('compress') ? `<span class="note ok">${saved > 0 ? saved + '% smaller than the original (' + fmtMB(file.size) + ')' : 'Result is not smaller than the original — try a lower setting.'}</span>` : ''}${isGif ? `<img src="${url}" alt="" style="max-width:100%;border-radius:12px;margin-top:10px">` : ''}${isVideo ? `<video controls src="${url}"></video>` : isAudio ? `<audio controls src="${url}"></audio>` : ''}<a class="btn dl" download="${name}" href="${url}">⬇ Download ${name}</a>`;
+    done.innerHTML = `<b>Done — ${name} (${fmtMB(blob.size)})</b>${T.mode.startsWith('compress') ? `<span class="note ok">${saved > 0 ? saved + '% smaller than the original (' + fmtMB(file.size) + ')' : 'Result is not smaller than the original — try a lower setting.'}</span>` : ''}${isGif ? `<img src="${url}" alt="" style="max-width:100%;border-radius:12px;margin-top:10px">` : ''}${isVideo ? `<video controls src="${url}"></video>` : isAudio ? `<audio controls src="${url}"></audio>` : ''}<a class="btn dl" download="${name}" href="${url}">Download ${name}</a>`;
     done.hidden = false; status.textContent = 'Finished.'; fill.style.width = '100%';
     try { await ff.deleteFile(inName); await ff.deleteFile(out); } catch {}
   } catch (e) {
-    status.textContent = '⚠ ' + (e.message || e); status.classList.add('err');
+    status.textContent = '' + (e.message || e); status.classList.add('err');
     ffmpeg = null; // force fresh engine after a crash / OOM
   } finally { go.disabled = false; }
 });
