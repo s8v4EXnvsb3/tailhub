@@ -2,7 +2,7 @@ import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:4173';
 const axe = fs.readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
-const pages = ['/', '/background-remover/', '/speech-to-text/', '/image-upscaler/', '/ocr-image-to-text/', '/compress-audio/', '/pdf-merge/', '/malay-text-to-speech/', '/image-compressor/', '/blog/'];
+const pages = ['/', '/background-remover/', '/speech-to-text/', '/image-upscaler/', '/ocr-image-to-text/', '/compress-audio/', '/pdf-merge/', '/malay-text-to-speech/', '/image-compressor/', '/blog/', '/contact/', '/about/', '/privacy/'];
 const b = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' });
 const seen = {};
 for (const theme of ['dark', 'light']) for (const w of [1280, 390]) {

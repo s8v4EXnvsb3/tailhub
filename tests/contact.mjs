@@ -4,7 +4,7 @@ const b = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Micros
 const p = await (await b.newContext()).newPage(); let bad = 0;
 const ck = (n, c, g) => { if (!c) bad++; console.log(c ? 'PASS' : 'FAIL', n, c ? '' : JSON.stringify(g)); };
 await p.goto(base + '/'); const hrefs = await p.$$eval('#sponsors a', (a) => a.map((x) => x.getAttribute('href')));
-ck('7 sponsor links all go to /contact/', hrefs.length === 7 && hrefs.every((h) => h === '/contact/'), hrefs);
+ck('4 slots + header link all go to /contact/', hrefs.length === 5 && hrefs.every((h) => h === '/contact/'), hrefs);
 await p.click('#sponsors .lnk'); await p.waitForURL('**/contact/'); ck('Become a sponsor opens contact page', p.url().endsWith('/contact/'));
 ck('email link', (await p.getAttribute('.contact a.btn', 'href')).startsWith('mailto:s8v4EXnvsb3@proton.me'));
 ck('no github link left', !(await p.content()).includes('github.com/s8v4'));
