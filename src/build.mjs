@@ -6,7 +6,7 @@ import { buildPost, postTitle } from './content.mjs';
 import { UI, ffmpegUI, ttsUI } from './ui.mjs';
 
 const SITE = 'TailHub';
-const URL_BASE = process.env.SITE_URL || 'https://tailhub.vercel.app';
+const URL_BASE = process.env.SITE_URL || 'https://tailhub-liard.vercel.app';
 const DATE = '2026-11-13';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
