@@ -37,6 +37,8 @@ const dlProgress = (label) => { const files = {}; return (e) => {
   if (e.status === 'progress' && e.total) { files[e.file] = { l: e.loaded, t: e.total }; let l = 0, t = 0; for (const k in files) { l += files[k].l; t += files[k].t; } bar(l / t, `${label}: ${fmtB(l)} of ${fmtB(t)}`); }
   else if (e.status === 'ready') bar(1, 'Model ready');
 }; };
+// Some browsers (Safari) accept ctx.filter but ignore it, so test it on real pixels once.
+let _cf; const canvasFilterWorks = () => { if (_cf !== undefined) return _cf; try { const t = document.createElement('canvas'); t.width = 8; t.height = 1; const c = t.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, 8, 1); const s2 = document.createElement('canvas'); s2.width = 8; s2.height = 1; const d = s2.getContext('2d'); d.fillStyle = '#000'; d.fillRect(0, 0, 4, 1); d.fillStyle = '#fff'; d.fillRect(4, 0, 4, 1); c.fillStyle = '#000'; c.fillRect(0, 0, 4, 1); c.filter = 'blur(2px)'; c.drawImage(s2, 0, 0); const p = c.getImageData(3, 0, 1, 1).data[0]; _cf = p > 5 && p < 250; } catch { _cf = false; } return _cf; };
 const fail = (e) => { barOff(); busy(false); note(/fetch|network|load/i.test(String(e)) ? 'Could not download the model. Check your connection and try again. (' + (e.message || e) + ')' : 'Something went wrong: ' + (e.message || e), 'err'); console.error(e); window.__reportError && window.__reportError(location.pathname + ": " + (e.message || e), e.stack); };
 
 const tools = {
@@ -81,6 +83,7 @@ const tools = {
     const run = async (f) => {
       busy(true); $('result').hidden = true; note('');
       try {
+        if (typeof OffscreenCanvas === 'undefined') throw new Error('This browser is too old for the background remover. Please update your browser, or use a current Chrome, Edge or Firefox.');
         const m = await tf(); bar(0.01, 'Loading model...');
         if (!model) { model = await m.AutoModel.from_pretrained('Xenova/modnet', { dtype: 'q8', device: 'wasm', progress_callback: dlProgress('Downloading model') }); proc = await m.AutoProcessor.from_pretrained('Xenova/modnet'); }
         bar(0.6, 'Removing background...'); await new Promise((r) => setTimeout(r, 30));
@@ -116,7 +119,9 @@ const tools = {
       busy(true); $('out').value = ''; chunks = []; note('');
       try {
         bar(0.02, 'Reading audio...');
-        const ac = new AudioContext({ sampleRate: 16000 });
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) throw new Error('This browser cannot read audio for transcription. Please update your browser, or use a current Chrome, Edge or Firefox.');
+        const ac = new AC({ sampleRate: 16000 });
         let au; try { au = await ac.decodeAudioData(await f.arrayBuffer()); } catch { throw new Error('This file has no audio the browser can decode. Try MP3, WAV, M4A, OGG or MP4.'); }
         const n = au.length, data = new Float32Array(n); for (let c = 0; c < au.numberOfChannels; c++) { const ch = au.getChannelData(c); for (let i = 0; i < n; i++) data[i] += ch[i] / au.numberOfChannels; }
         const dur = au.duration; ac.close();
@@ -149,7 +154,16 @@ const tools = {
       for (const b of faces) {
         const px = b.originX - b.width * 0.15, py = b.originY - b.height * 0.25, w = b.width * 1.3, h = b.height * 1.5;
         x.save(); x.beginPath(); x.ellipse(px + w / 2, py + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); x.clip();
-        if (style === 'blur') { x.filter = `blur(${Math.max(4, b.width * 0.12 * k)}px)`; x.drawImage(orig, 0, 0); }
+        if (style === 'blur') {
+          const r = Math.max(4, b.width * 0.12 * k); x.filter = `blur(${r}px)`;
+          if (canvasFilterWorks()) x.drawImage(orig, 0, 0);
+          else { // Safari has no canvas filter: shrink the face area a lot, then scale it back up smoothed
+            x.filter = 'none'; const sc = Math.max(1, r * 1.5); const t = document.createElement('canvas');
+            t.width = Math.max(2, Math.ceil(w / sc)); t.height = Math.max(2, Math.ceil(h / sc));
+            const tx = t.getContext('2d'); tx.imageSmoothingQuality = 'high'; tx.drawImage(orig, px, py, w, h, 0, 0, t.width, t.height);
+            x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(t, 0, 0, t.width, t.height, px, py, w, h);
+          }
+        }
         else if (style === 'pixel') { const s = Math.max(4, Math.round((b.width / 10) * k)); const t = document.createElement('canvas'); t.width = Math.max(1, Math.ceil(w / s)); t.height = Math.max(1, Math.ceil(h / s)); t.getContext('2d').drawImage(orig, px, py, w, h, 0, 0, t.width, t.height); x.imageSmoothingEnabled = false; x.drawImage(t, 0, 0, t.width, t.height, px, py, t.width * s, t.height * s); }
         else { x.fillStyle = '#000'; x.fillRect(px, py, w, h); }
         x.restore();
