@@ -1,112 +1,129 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tools, categories } from './tools.mjs';
+import { tools, categories, featured } from './tools.mjs';
+import { buildPost, postTitle } from './content.mjs';
+import { UI, ffmpegUI, ttsUI } from './ui.mjs';
 
+const SITE = 'TailHub';
+const URL_BASE = process.env.SITE_URL || 'https://tailhub.vercel.app';
+const DATE = '2026-11-13';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const nm = (p) => path.join(root, 'node_modules', p);
-const SITE = 'ToolHub';
 
-fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
-const cp = (from, to) => { fs.mkdirSync(path.dirname(path.join(dist, to)), { recursive: true }); fs.cpSync(from, path.join(dist, to), { recursive: true }); };
-const write = (rel, content) => { const f = path.join(dist, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, content); };
+for (const f of fs.readdirSync(dist)) fs.rmSync(path.join(dist, f), { recursive: true, force: true }); // keep dist itself: a local preview server may hold it open
+fs.cpSync(path.join(root, 'src/assets'), path.join(dist, 'assets'), { recursive: true });
+// Everything is self-hosted: no CDN, and single-threaded ffmpeg core needs no COOP/COEP headers.
+fs.cpSync(nm('@ffmpeg/ffmpeg/dist/esm'), path.join(dist, 'vendor/ffmpeg'), { recursive: true });
+fs.cpSync(nm('@ffmpeg/util/dist/esm'), path.join(dist, 'vendor/ffmpeg-util'), { recursive: true });
+fs.mkdirSync(path.join(dist, 'vendor/ffmpeg-core'), { recursive: true });
+for (const f of ['ffmpeg-core.js', 'ffmpeg-core.wasm']) fs.copyFileSync(nm('@ffmpeg/core/dist/esm/' + f), path.join(dist, 'vendor/ffmpeg-core', f));
+fs.copyFileSync(nm('pdf-lib/dist/pdf-lib.min.js'), path.join(dist, 'vendor/pdf-lib.min.js'));
+fs.copyFileSync(nm('qrcode-generator/dist/qrcode.js'), path.join(dist, 'vendor/qrcode.js'));
 
-// static assets + vendored libs (self-hosted: no CDN, no COOP/COEP needed)
-cp(path.join(root, 'src/assets'), 'assets');
-cp(nm('@ffmpeg/ffmpeg/dist/esm'), 'vendor/ffmpeg');
-cp(nm('@ffmpeg/util/dist/esm'), 'vendor/ffmpeg-util');
-cp(nm('@ffmpeg/core/dist/esm/ffmpeg-core.js'), 'vendor/ffmpeg-core/ffmpeg-core.js');
-cp(nm('@ffmpeg/core/dist/esm/ffmpeg-core.wasm'), 'vendor/ffmpeg-core/ffmpeg-core.wasm');
-cp(nm('pdf-lib/dist/pdf-lib.min.js'), 'vendor/pdf-lib.min.js');
-cp(nm('qrcode-generator/dist/qrcode.js'), 'vendor/qrcode.js');
-for (const f of fs.readdirSync(path.join(dist, 'vendor/ffmpeg'))) if (f.endsWith('.d.ts') || f.endsWith('.d.mts')) fs.rmSync(path.join(dist, 'vendor/ffmpeg', f));
-for (const f of fs.readdirSync(path.join(dist, 'vendor/ffmpeg-util'))) if (f.endsWith('.d.ts')) fs.rmSync(path.join(dist, 'vendor/ffmpeg-util', f));
-
+const write = (rel, html) => { const f = path.join(dist, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, html); };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const href = (t) => `/${t.slug}/`;
+const cat = Object.fromEntries(categories.map((c) => [c.id, c]));
+const bySlug = Object.fromEntries(tools.map((t) => [t.slug, t]));
+const toolUrl = (t) => `/${t.slug}/`, postUrl = (t) => `/blog/${t.slug}/`;
+const keyOf = (t) => `${t.title} ${t.desc} ${cat[t.category].name}`.toLowerCase();
 
-const head = (title, desc, extra = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
-<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="/assets/style.css">${extra}</head><body>`;
-const nav = `<header class="nav"><a class="brand" href="/"><span class="logo">⚡</span>${SITE}</a>
-<nav><a href="/#convert">Converters</a><a href="/#speech">Speech</a><a href="/#text">Text</a><a href="/#image">Image &amp; PDF</a></nav></header>`;
-const foot = `<footer class="foot"><p>${SITE} — free tools that run entirely in your browser. Your files never leave your device.</p></footer>`;
+// ------------------------------------------------------------------ shared chrome
+const themeBoot = `<script>try{var t=localStorage.getItem('th-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='dark'}</script>`;
 
-const card = (t) => `<a class="card" href="${href(t)}" data-q="${esc((t.title + ' ' + t.desc).toLowerCase())}"><span class="ico">${t.icon}</span><span class="ct">${esc(t.title)}</span><span class="cd">${esc(t.desc.split('. ')[0].replace(/\.$/, ''))}</span></a>`;
-
-// ---------- Home
-const sections = categories.map((c) => {
-  const list = tools.filter((t) => t.category === c.id);
-  return `<section class="cat" id="${c.id}"><div class="cat-h"><h2>${c.name}</h2><span class="count">${list.length} tools</span></div><p class="blurb">${c.blurb}</p><div class="grid">${list.map(card).join('')}</div></section>`;
-}).join('');
-write('index.html', head(`${SITE} — Free online audio, video, text & PDF tools`, 'Free browser-based tools: MP4 to MP3, video compressor, text to speech in 15 languages, ringtone maker, QR codes, PDF merge and more. No uploads, no signup.') +
-  nav + `<main>
-<section class="hero"><div class="pill">${tools.length} free tools · no uploads · no signup</div>
-<h1>Every everyday file tool,<br><span class="grad">right in your browser.</span></h1>
-<p class="lead">Convert audio and video, compress files, turn text into speech, and more. Everything runs on your device, so your files stay private and nothing waits in a queue.</p>
-<div class="search"><input id="q" type="search" placeholder="Search tools — try “mp3”, “hindi”, “pdf”…" autocomplete="off"></div>
-<div class="chips">${categories.map((c) => `<a href="#${c.id}">${c.name}</a>`).join('')}</div></section>
-<div id="none" class="none" hidden>No tools match your search.</div>
-${sections}
-<section class="why"><div><h3>🔒 Private</h3><p>Files are processed locally with WebAssembly. Nothing is uploaded.</p></div><div><h3>⚡ Fast</h3><p>No upload or download queue — start converting instantly.</p></div><div><h3>🆓 Free</h3><p>No watermarks, no accounts, no limits on file count.</p></div></section>
-</main>${foot}<script src="/assets/home.js"></script></body></html>`);
-
-// ---------- Tool pages
-const utilBody = {
-  'word-counter': `<textarea id="in" rows="10" placeholder="Type or paste your text…"></textarea><div class="stats" id="stats"></div>`,
-  'case-converter': `<textarea id="in" rows="8" placeholder="Type or paste your text…"></textarea><div class="btns" id="cases"></div><textarea id="out" rows="8" readonly placeholder="Result"></textarea><button class="btn ghost" id="copy">Copy result</button>`,
-  'remove-duplicate-lines': `<textarea id="in" rows="9" placeholder="One item per line…"></textarea><div class="opts"><label><input type="checkbox" id="trim" checked> Trim spaces</label><label><input type="checkbox" id="ci"> Ignore case</label><label><input type="checkbox" id="sort"> Sort A→Z</label><label><input type="checkbox" id="empty" checked> Remove empty lines</label></div><div class="btns"><button class="btn" id="go">Remove duplicates</button></div><div class="note" id="info"></div><textarea id="out" rows="9" readonly></textarea><button class="btn ghost" id="copy">Copy result</button>`,
-  'text-diff': `<div class="two"><div><label class="lbl">Original</label><textarea id="a" rows="9"></textarea></div><div><label class="lbl">Changed</label><textarea id="b" rows="9"></textarea></div></div><div class="btns"><button class="btn" id="go">Compare</button></div><div class="diff" id="out"></div>`,
-  'lorem-ipsum-generator': `<div class="opts"><label>Amount <input type="number" id="n" value="3" min="1" max="100"></label><label>Unit <select id="unit"><option value="p">Paragraphs</option><option value="s">Sentences</option><option value="w">Words</option></select></label><label><input type="checkbox" id="classic" checked> Start with “Lorem ipsum”</label></div><div class="btns"><button class="btn" id="go">Generate</button></div><textarea id="out" rows="12" readonly></textarea><button class="btn ghost" id="copy">Copy</button>`,
-  'json-formatter': `<textarea id="in" rows="12" placeholder='Paste JSON here, e.g. {"a":1}'></textarea><div class="btns"><button class="btn" id="pretty">Format</button><button class="btn ghost" id="min">Minify</button><button class="btn ghost" id="copy">Copy</button></div><div class="note" id="info"></div><textarea id="out" rows="12" readonly></textarea>`,
-  'base64-encoder-decoder': `<textarea id="in" rows="7" placeholder="Text or Base64…"></textarea><div class="btns"><button class="btn" id="enc">Encode →</button><button class="btn ghost" id="dec">← Decode</button><button class="btn ghost" id="copy">Copy result</button></div><div class="note" id="info"></div><textarea id="out" rows="7" readonly></textarea>`,
-  'qr-code-generator': `<textarea id="in" rows="3" placeholder="https://example.com or any text">https://example.com</textarea><div class="opts"><label>Size <select id="size"><option>256</option><option selected>512</option><option>1024</option></select></label><label>Error correction <select id="ecc"><option value="L">Low</option><option value="M" selected>Medium</option><option value="Q">Quartile</option><option value="H">High</option></select></label></div><div class="qrbox" id="qr"></div><div class="btns"><button class="btn" id="png">Download PNG</button><button class="btn ghost" id="svg">Download SVG</button></div>`,
-  'image-compressor': `<div class="drop" id="drop"><input type="file" id="file" accept="image/*" multiple hidden><div class="drop-i">🖼️</div><b>Choose images</b> or drop them here</div><div class="opts"><label>Format <select id="fmt"><option value="image/jpeg">JPG</option><option value="image/webp" selected>WebP</option><option value="image/png">PNG</option></select></label><label>Quality <input type="range" id="qual" min="30" max="100" value="80"><span id="qv">80</span></label><label>Max width (px) <input type="number" id="maxw" value="1920" min="16"></label></div><div id="results" class="results"></div>`,
-  'pdf-merge': `<div class="drop" id="drop"><input type="file" id="file" accept="application/pdf,.pdf" multiple hidden><div class="drop-i">📚</div><b>Choose PDFs</b> or drop them here</div><ul id="list" class="flist"></ul><div class="btns"><button class="btn" id="go" disabled>Merge PDFs</button></div><div class="note" id="info"></div>`,
-};
-
-const ffmpegBody = (t) => {
-  let opts = '';
-  if (t.mode === 'compress-audio') opts = `<div class="opts"><label>Bitrate <select id="bitrate"><option value="64k">64 kbps (smallest)</option><option value="96k">96 kbps</option><option value="128k" selected>128 kbps</option><option value="192k">192 kbps</option></select></label><label>Channels <select id="chan"><option value="">Keep</option><option value="1">Mono</option></select></label></div>`;
-  if (t.mode === 'compress-video') opts = `<div class="opts"><label>Max height <select id="height"><option value="">Original</option><option value="1080">1080p</option><option value="720" selected>720p</option><option value="480">480p</option></select></label><span class="note">Target size: ~${t.targetMB} MB</span></div>`;
-  if (t.mode === 'ringtone') opts = `<div class="opts"><label>Start (sec) <input type="number" id="start" value="0" min="0" step="0.1"></label><label>Length (sec) <input type="number" id="len" value="30" min="1" max="40" step="0.1"></label></div><audio id="preview" controls class="prev" hidden></audio><div class="note">iPhone ringtones must be 40 seconds or shorter. 30 s is a safe default.</div>`;
-  return `<div class="drop" id="drop"><input type="file" id="file" accept="${esc(t.accept)}" hidden><div class="drop-i">${t.icon}</div><b>Choose a file</b> or drop it here<div class="fname" id="fname"></div></div>${opts}
-<div class="btns"><button class="btn" id="go" disabled>${t.mode === 'ringtone' ? 'Create ringtone' : t.mode.startsWith('compress') ? 'Compress' : `Convert to ${t.out.toUpperCase()}`}</button></div>
-<div class="prog" id="prog" hidden><div class="bar"><i id="barfill"></i></div><div class="note" id="status">Loading engine…</div></div>
-<div class="done" id="done" hidden></div>`;
-};
-
-const ttsBody = (t) => `<textarea id="in" rows="8" placeholder="Type or paste text…">${esc(t.sample)}</textarea>
-<div class="opts">${t.multi ? `<label>Language <select id="lang">${t.multi.map((l) => `<option>${l}</option>`).join('')}</select></label>` : ''}<label>Voice <select id="voice"><option>Loading voices…</option></select></label><label>Speed <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1"><span id="rv">1.0×</span></label><label>Pitch <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1"><span id="pv">1.0</span></label></div>
-<div class="btns"><button class="btn" id="play">▶ Speak</button><button class="btn ghost" id="pause">Pause</button><button class="btn ghost" id="stop">Stop</button></div>
-<div class="note" id="info"></div>`;
-
-const FAQ = {
-  ffmpeg: [['Is my file uploaded?', 'No. The conversion runs inside your browser using WebAssembly. Your file never leaves your device.'], ['Is there a file size limit?', 'There is no server limit, but browsers cap memory. Files up to about 1 GB usually work on a desktop; large videos take longer.'], ['Why is the first run slower?', 'The conversion engine (about 30 MB) loads once and is then cached by your browser.']],
-  tts: [['Which voices are used?', 'Your device’s built-in voices. Quality varies by operating system and browser — Chrome and Edge usually offer the most.'], ['I can’t find a voice for this language', 'Install the language voice in your OS settings (Windows: Settings → Time & language → Speech), then reload the page.'], ['Can I download the audio?', 'Browser speech can’t be saved directly. Use the Speak button, or record system audio.']],
-  util: [['Is my data sent anywhere?', 'No. Everything is processed locally in your browser.']],
-};
-
-for (const t of tools) {
-  const related = tools.filter((x) => x.category === t.category && x.slug !== t.slug).slice(0, 8);
-  const body = t.kind === 'ffmpeg' ? ffmpegBody(t) : t.kind === 'tts' ? ttsBody(t) : utilBody[t.slug];
-  const faq = FAQ[t.kind].map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('');
-  const scripts = t.kind === 'ffmpeg' ? '<script type="module" src="/assets/ffmpeg-tool.js"></script>' : t.kind === 'tts' ? '<script src="/assets/tts.js"></script>'
-    : `${t.slug === 'pdf-merge' ? '<script src="/vendor/pdf-lib.min.js"></script>' : ''}${t.slug === 'qr-code-generator' ? '<script src="/vendor/qrcode.js"></script>' : ''}<script src="/assets/utils.js"></script>`;
-  write(`${t.slug}/index.html`, head(`${t.title} — Free Online | ${SITE}`, t.desc) + nav + `<main class="tool">
-<div class="crumb"><a href="/">All tools</a> <span>/</span> ${esc(t.title)}</div>
-<h1>${t.icon} ${esc(t.title)}</h1><p class="lead">${esc(t.desc)}</p>
-<div class="panel" id="app">${body}</div>
-<section class="faq"><h2>FAQ</h2>${faq}</section>
-${related.length ? `<section class="related"><h2>More ${categories.find((c) => c.id === t.category).name.toLowerCase()}</h2><div class="grid sm">${related.map(card).join('')}</div></section>` : ''}
-</main>${foot}<script>window.TOOL=${JSON.stringify(t).replace(/</g, '\\u003c')};</script>${scripts}</body></html>`);
+function sidebar(activePath) {
+  const groups = categories.map((c) => {
+    const items = tools.filter((t) => t.category === c.id);
+    return `<details><summary><span>${c.icon}</span>${esc(c.name)}<span class="n">${items.length}</span></summary>${items.map((t) => `<a class="lk${toolUrl(t) === activePath ? ' on' : ''}" href="${toolUrl(t)}" data-q="${esc(keyOf(t))}">${esc(t.title)}</a>`).join('')}</details>`;
+  }).join('');
+  return `<aside class="side" aria-label="All tools"><div class="side-h"><a class="brand" href="/"><span class="logo">🪝</span><span>Tail<em>Hub</em></span></a><input class="sq" type="search" placeholder="Search ${tools.length} tools…  ( / )" aria-label="Search tools"></div><nav class="nav-top"><a href="/"${activePath === '/' ? ' class="on"' : ''}>Home</a><a href="/blog/"${activePath.startsWith('/blog') ? ' class="on"' : ''}>Blog</a></nav><div class="side-s">${groups}</div><div class="side-f"><span>${tools.length} free tools</span><span>No uploads</span></div></aside><div class="shade"></div>`;
 }
 
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>/</loc></url>${tools.map((t) => `<url><loc>${href(t)}</loc></url>`).join('')}</urlset>`);
-write('robots.txt', 'User-agent: *\nAllow: /\n');
-console.log(`built ${tools.length} tool pages`);
+function page({ title, desc, path: p, body, scripts = '', head = '', activePath }) {
+  const full = title.includes(SITE) ? title : `${title} | ${SITE}`;
+  return `<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(full)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${URL_BASE}${p}"><meta property="og:title" content="${esc(full)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:type" content="website"><meta name="theme-color" content="#7c5cff"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪝%3C/text%3E%3C/svg%3E">${themeBoot}<link rel="stylesheet" href="/assets/style.css">${head}</head><body>${sidebar(activePath ?? p)}<div class="wrap"><header class="top"><button class="ib burger" aria-label="Open menu">☰</button><a class="brand" href="/"><span class="logo">🪝</span><span>Tail<em>Hub</em></span></a><span class="sp"></span><a class="ib" href="/blog/" aria-label="Blog" title="Blog">📖</a><button class="ib tt" aria-label="Toggle light / dark mode" title="Toggle light / dark mode"><span class="moon">🌙</span><span class="sun">☀️</span></button></header><main>${body}</main><footer><span>© ${new Date().getFullYear()} ${SITE}. Free online tools that run in your browser. Your files never leave your device.</span><span><a href="/">Tools</a> · <a href="/blog/">Blog</a></span></footer></div><script src="/assets/site.js"></script>${scripts}</body></html>`;
+}
+
+const card = (t) => `<a class="card" href="${toolUrl(t)}" data-q="${esc(keyOf(t))}" style="--h:${cat[t.category].hue}"><span class="ic">${t.icon}</span><span><b>${esc(t.title)}</b><span class="d">${esc(t.desc)}</span></span></a>`;
+
+// ------------------------------------------------------------------ tool pages
+function toolBody(t) {
+  const ui = t.kind === 'ffmpeg' ? ffmpegUI(t) : t.kind === 'tts' ? ttsUI(t) : UI[t.slug]();
+  const post = buildPost(t);
+  const related = tools.filter((x) => x.category === t.category && x.slug !== t.slug).slice(0, 6);
+  const faqs = [
+    ['Is this tool free?', `Yes. ${t.title} is completely free, with no sign-up, watermark or usage limit.`],
+    ['Are my files or text uploaded anywhere?', t.kind === 'tts' ? 'No. Speech is generated by the voices installed on your device. Your text is not sent to a server.' : 'No. Everything runs inside your browser. Nothing is uploaded, so your data stays private.'],
+    ...(t.kind === 'ffmpeg' ? [['Why is the first run slow?', 'The first time, your browser downloads the conversion engine (about 30 MB). It is cached afterwards, so later runs start straight away.']] : []),
+    ...(t.kind === 'tts' ? [['Why can I not find a voice?', 'Voices come from your operating system and browser. Install the language in your system speech settings, or try Chrome or Edge.']] : []),
+  ];
+  const ld = { '@context': 'https://schema.org', '@type': 'WebApplication', name: t.title, description: t.desc, url: URL_BASE + toolUrl(t), applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } };
+  return `<div class="crumbs"><a href="/">Home</a> › ${esc(cat[t.category].name)} › ${esc(t.title)}</div>
+<div class="th"><span class="ic">${t.icon}</span><div><h1>${esc(t.title)}</h1></div></div><p class="lead">${esc(t.desc)}</p>
+<div class="badges"><span class="badge">🔒 Private</span><span class="badge">⚡ No sign-up</span><span class="badge">🆓 Free forever</span></div>
+<section class="panel">${ui}</section>
+<section class="sec"><h2>How to use ${esc(t.title)}</h2><ol>${post.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol><p><a href="${postUrl(t)}" class="grad"><b>Read the full guide →</b></a></p></section>
+<section class="sec"><h2>Frequently asked questions</h2>${faqs.map(([q, a]) => `<details class="faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</section>
+<section class="sec"><h2>Related tools</h2><div class="grid">${related.map(card).join('')}</div></section>
+<script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+}
+
+for (const t of tools) {
+  const scripts = [`<script>window.TOOL=${JSON.stringify(t).replace(/</g, '\\u003c')}</script>`];
+  if (t.kind === 'ffmpeg') scripts.push('<script type="module" src="/assets/ffmpeg-tool.js"></script>');
+  else if (t.kind === 'tts') scripts.push('<script src="/assets/tts.js"></script>');
+  else {
+    if (t.slug === 'qr-code-generator') scripts.push('<script src="/vendor/qrcode.js"></script>');
+    if (['pdf-merge', 'pdf-split', 'image-to-pdf'].includes(t.slug)) scripts.push('<script src="/vendor/pdf-lib.min.js"></script>');
+    scripts.push('<script src="/assets/utils.js"></script><script src="/assets/utils2.js"></script>');
+  }
+  write(`${t.slug}/index.html`, page({ title: t.title + ' (Free Online)', desc: t.desc, path: toolUrl(t), body: toolBody(t), scripts: scripts.join('') }));
+}
+
+// ------------------------------------------------------------------ blog
+function postBody(t) {
+  const p = buildPost(t), title = postTitle(t);
+  const related = tools.filter((x) => x.category === t.category && x.slug !== t.slug).slice(0, 4);
+  return `<article class="post"><div class="crumbs"><a href="/">Home</a> › <a href="/blog/">Blog</a> › ${esc(t.title)}</div>
+<h1>${esc(title)}</h1><div class="meta">${esc(cat[t.category].name)} · Updated ${DATE} · ${Math.max(2, Math.round((p.about.length + p.steps.join('').length + p.tips.join('').length) / 900))} min read</div>
+<p><b>${esc(t.desc)}</b></p>
+<div class="tcta"><div><b>${t.icon} ${esc(t.title)}</b><br><span style="color:var(--mut)">Free, private, no sign-up.</span></div><a class="btn" href="${toolUrl(t)}">Open the tool</a></div>
+<h2>What is it?</h2><p>${esc(p.about)}</p>
+<h2>How to use ${esc(t.title)}</h2><ol>${p.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+<h2>Tips for better results</h2><ul>${p.tips.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
+<h2>Common uses</h2><ul>${p.uses.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
+<h2>Is it private?</h2><p>${t.kind === 'tts' ? 'Yes. The speech is produced by voices already installed on your device, so your text is never sent to a server.' : 'Yes. TailHub tools run entirely in your browser using modern web technology. Your files and text never leave your device, and nothing is stored.'}</p>
+<div class="tcta"><div><b>Ready to try it?</b></div><a class="btn" href="${toolUrl(t)}">Use ${esc(t.title)} →</a></div>
+<h2>More guides</h2><div class="grid">${related.map((r) => `<a class="pcard" href="${postUrl(r)}"><b>${esc(r.title)}</b><span>${esc(r.desc)}</span></a>`).join('')}</div></article>
+<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: title, datePublished: DATE, dateModified: DATE, author: { '@type': 'Organization', name: SITE }, mainEntityOfPage: URL_BASE + postUrl(t) })}</script>`;
+}
+for (const t of tools) write(`blog/${t.slug}/index.html`, page({ title: postTitle(t), desc: `${t.desc} A short guide with steps, tips and common uses.`, path: postUrl(t), body: postBody(t) }));
+
+const blogIndex = `<div class="hero" style="padding:40px 20px 28px"><span class="pill">📖 Guides</span><h1>The ${SITE} <span class="grad">Blog</span></h1><p>Practical, plain-English guides for every tool: what it does, how to use it and how to get the best result.</p></div>${categories.map((c) => `<div class="shead"><div><h2>${c.icon} ${esc(c.name)}</h2></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map((t) => `<a class="pcard" href="${postUrl(t)}"><b>${esc(postTitle(t))}</b><span>${esc(t.desc)}</span><small>Read guide →</small></a>`).join('')}</div>`).join('')}`;
+write('blog/index.html', page({ title: 'Blog: Guides for Free Online Tools', desc: `Guides for all ${tools.length} free ${SITE} tools: converters, text to speech, PDF, image, developer and calculator tools.`, path: '/blog/', body: blogIndex }));
+
+// ------------------------------------------------------------------ landing page
+const feat = featured.map((s) => bySlug[s]).filter(Boolean);
+const landing = `<section class="hero"><span class="pill">✨ ${tools.length} free tools · no sign-up · no uploads</span>
+<h1>Every everyday tool,<br><span class="grad">one tidy hub.</span></h1>
+<p>Convert audio and video, read text aloud in 26 languages, work with PDFs and images, and more. Everything runs privately in your browser.</p>
+<div class="search"><input id="q" type="search" placeholder="Search tools: mp3, pdf, qr, password…" autofocus aria-label="Search tools"></div>
+<div class="kpis"><span class="kpi"><b>${tools.length}</b> tools</span><span class="kpi"><b>${categories.length}</b> categories</span><span class="kpi"><b>0</b> uploads</span><span class="kpi"><b>100%</b> free</span></div></section>
+<div class="chips landing-only">${categories.map((c) => `<a class="chip" href="#${c.id}">${c.icon} ${esc(c.name)}</a>`).join('')}</div>
+<section class="landing-only"><div class="shead"><div><h2>⭐ Popular right now</h2><p>The tools people reach for most.</p></div></div><div class="grid">${feat.map(card).join('')}</div></section>
+<p id="none" class="note" hidden style="text-align:center;font-size:17px;padding:40px">No tools match your search.</p>
+${categories.map((c) => `<section class="cat" id="${c.id}"><div class="shead"><div><h2>${c.icon} ${esc(c.name)}</h2><p>${esc(c.blurb)}</p></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map(card).join('')}</div></section>`).join('')}
+<section class="landing-only"><div class="shead"><div><h2>How it works</h2></div></div><div class="steps"><div class="step"><i>1️⃣</i><b>Pick a tool</b><p>Use the sidebar or search to find what you need.</p></div><div class="step"><i>2️⃣</i><b>Add your file or text</b><p>Drop it in. It is processed by your own browser.</p></div><div class="step"><i>3️⃣</i><b>Download the result</b><p>Nothing is uploaded, stored or tracked.</p></div></div></section>
+<section class="landing-only"><div class="shead"><div><h2>From the blog</h2><p>Guides for getting the most from each tool.</p></div><a href="/blog/" class="grad"><b>All guides →</b></a></div><div class="grid">${feat.slice(0, 4).map((t) => `<a class="pcard" href="${postUrl(t)}"><b>${esc(postTitle(t))}</b><span>${esc(t.desc)}</span><small>Read guide →</small></a>`).join('')}</div></section>
+<section class="cta landing-only"><h2>Private by design</h2><p style="color:var(--mut);max-width:560px;margin:0 auto">TailHub runs on your device using WebAssembly and modern browser APIs. There are no accounts, no servers processing your files and no limits.</p></section>
+<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: SITE, url: URL_BASE })}</script>`;
+write('index.html', page({ title: `${SITE}: ${tools.length} Free Online Tools That Run in Your Browser`, desc: `${tools.length} free tools: MP3 and video converters, text to speech, PDF and image tools, calculators and developer utilities. Private and no sign-up.`, path: '/', body: landing }));
+
+// ------------------------------------------------------------------ 404, sitemap, robots
+write('404.html', page({ title: 'Page not found', desc: 'Page not found', path: '/404/', body: `<div class="hero"><h1>404</h1><p>That page does not exist. Try the sidebar or search.</p><a class="btn" href="/">Back to all tools</a></div>` }));
+const urls = ['/', '/blog/', ...tools.flatMap((t) => [toolUrl(t), postUrl(t)])];
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${URL_BASE}${u}</loc><lastmod>${DATE}</lastmod></url>`).join('')}</urlset>`);
+write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${URL_BASE}/sitemap.xml\n`);
+console.log(`Built ${tools.length} tools + ${tools.length} blog posts → dist/`);

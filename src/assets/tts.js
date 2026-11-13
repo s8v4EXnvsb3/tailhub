@@ -23,7 +23,7 @@
     list.forEach((v) => { const o = document.createElement('option'); o.value = v.name; o.textContent = `${v.name} (${v.lang})`; voiceSel.appendChild(o); });
   }
   fill(); synth.onvoiceschanged = fill;
-  if (langSel) langSel.addEventListener('change', fill);
+  if (langSel) langSel.addEventListener('change', () => { fill(); if (T.samples && T.samples[langSel.value]) $('in').value = T.samples[langSel.value]; });
 
   $('rate').oninput = (e) => ($('rv').textContent = (+e.target.value).toFixed(1) + '×');
   $('pitch').oninput = (e) => ($('pv').textContent = (+e.target.value).toFixed(1));

@@ -154,5 +154,5 @@
       render();
     },
   };
-  tools[T.slug]();
+  if (tools[T.slug]) tools[T.slug]();
 })();

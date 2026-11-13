@@ -15,7 +15,7 @@ function setFile(f) {
   file = f;
   $('fname').textContent = `${f.name} · ${fmtMB(f.size)}`;
   go.disabled = false; done.hidden = true;
-  if (T.mode === 'ringtone') { const p = $('preview'); p.src = URL.createObjectURL(f); p.hidden = false; }
+  if (T.mode === 'ringtone' || T.mode === 'trim') { const p = $('preview'); p.src = URL.createObjectURL(f); p.hidden = false; }
 }
 drop.addEventListener('click', () => fileIn.click());
 fileIn.addEventListener('change', () => setFile(fileIn.files[0]));
@@ -46,6 +46,7 @@ async function buildArgs(inName) {
   switch (T.mode) {
     case 'convert':
       if (T.out === 'mp3') return { out: 'out.mp3', args: ['-i', inName, '-vn', '-c:a', 'libmp3lame', '-q:a', '2'], mime: 'audio/mpeg' };
+      if (T.out === 'gif') return { out: 'out.gif', args: ['-t', '15', '-i', inName, '-vf', 'fps=12,scale=480:-2:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse', '-loop', '0'], mime: 'image/gif', outExt: 'gif' };
       if (T.out === 'wav') return { out: 'out.wav', args: ['-i', inName, '-vn', '-c:a', 'pcm_s16le'], mime: 'audio/wav' };
       return { out: 'out.mp4', args: ['-i', inName, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart'], mime: 'video/mp4' };
     case 'compress-audio': {
@@ -63,6 +64,12 @@ async function buildArgs(inName) {
       const a = ['-i', inName, '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', videoK + 'k', '-maxrate', Math.floor(videoK * 1.4) + 'k', '-bufsize', videoK * 2 + 'k', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', audioK + 'k', '-movflags', '+faststart'];
       if (h) a.push('-vf', `scale=-2:'min(${h},ih)'`);
       return { out: 'out.mp4', args: a, mime: 'video/mp4', suffix: `-${T.targetMB}mb`, outExt: 'mp4' };
+    }
+    case 'mute':
+      return { out: 'out.mp4', args: ['-i', inName, '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-movflags', '+faststart'], mime: 'video/mp4', suffix: '-muted', outExt: 'mp4' };
+    case 'trim': {
+      const s = Math.max(0, parseFloat($('start').value) || 0), l = Math.max(0.5, parseFloat($('len').value) || 30);
+      return { out: 'out.mp3', args: ['-ss', String(s), '-t', String(l), '-i', inName, '-vn', '-c:a', 'libmp3lame', '-q:a', '2'], mime: 'audio/mpeg', suffix: '-cut', outExt: 'mp3' };
     }
     case 'ringtone': {
       const s = Math.max(0, parseFloat($('start').value) || 0), l = Math.min(40, Math.max(1, parseFloat($('len').value) || 30));
@@ -88,9 +95,9 @@ go.addEventListener('click', async () => {
     const blob = new Blob([data.buffer], { type: mime });
     const name = base(file.name) + suffix + '.' + (outExt || T.out || 'mp3');
     const url = URL.createObjectURL(blob);
-    const isVideo = mime.startsWith('video'), isAudio = mime.startsWith('audio') && !mime.includes('m4r');
+    const isGif = mime === 'image/gif', isVideo = mime.startsWith('video'), isAudio = mime.startsWith('audio') && !mime.includes('m4r');
     const saved = file.size ? Math.round((1 - blob.size / file.size) * 100) : 0;
-    done.innerHTML = `<b>✅ Done — ${name} (${fmtMB(blob.size)})</b>${T.mode.startsWith('compress') ? `<span class="note ok">${saved > 0 ? saved + '% smaller than the original (' + fmtMB(file.size) + ')' : 'Result is not smaller than the original — try a lower setting.'}</span>` : ''}${isVideo ? `<video controls src="${url}"></video>` : isAudio ? `<audio controls src="${url}"></audio>` : ''}<a class="btn dl" download="${name}" href="${url}">⬇ Download ${name}</a>`;
+    done.innerHTML = `<b>✅ Done — ${name} (${fmtMB(blob.size)})</b>${T.mode.startsWith('compress') ? `<span class="note ok">${saved > 0 ? saved + '% smaller than the original (' + fmtMB(file.size) + ')' : 'Result is not smaller than the original — try a lower setting.'}</span>` : ''}${isGif ? `<img src="${url}" alt="" style="max-width:100%;border-radius:12px;margin-top:10px">` : ''}${isVideo ? `<video controls src="${url}"></video>` : isAudio ? `<audio controls src="${url}"></audio>` : ''}<a class="btn dl" download="${name}" href="${url}">⬇ Download ${name}</a>`;
     done.hidden = false; status.textContent = 'Finished.'; fill.style.width = '100%';
     try { await ff.deleteFile(inName); await ff.deleteFile(out); } catch {}
   } catch (e) {
