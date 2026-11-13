@@ -179,7 +179,7 @@ h1,h2,h3{letter-spacing:-.01em;font-weight:600}
 .shead{margin:36px 0 14px}
 .sponsors .shead p{display:flex;align-items:center;gap:8px}
 .adtag{font:500 11px var(--mono);border:1px solid var(--line);padding:1px 6px;border-radius:3px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
-.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
 .slot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;min-height:132px;padding:22px 14px 16px;border:1px dashed var(--line);border-radius:var(--r);color:var(--mut);transition:border-color .12s,color .12s}
 .slot:hover{border-color:var(--mut);color:var(--tx)}
 .slot b{color:var(--tx);font-weight:600;font-size:15px}.slot span:last-child{font-size:12.5px;max-width:170px;line-height:1.35}

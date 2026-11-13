@@ -7,7 +7,7 @@
   const copyBtn = () => { const b = $('copy'); if (!b) return; b.onclick = async () => { const o = $('out'); await navigator.clipboard.writeText(o.value ?? o.textContent); const t = b.textContent; b.textContent = 'Copied'; setTimeout(() => (b.textContent = t), 1200); }; };
   const wireDrop = (onFiles) => {
     const d = $('drop'), f = $('file');
-    d.onclick = () => f.click(); f.onchange = () => { onFiles([...f.files]); f.value = ''; };
+    d.onclick = (e) => { if (e.target !== f) f.click(); }; f.onchange = () => { onFiles([...f.files]); f.value = ''; };
     ['dragenter', 'dragover'].forEach((e) => d.addEventListener(e, (ev) => { ev.preventDefault(); d.classList.add('over'); }));
     ['dragleave', 'drop'].forEach((e) => d.addEventListener(e, (ev) => { ev.preventDefault(); d.classList.remove('over'); }));
     d.addEventListener('drop', (ev) => onFiles([...ev.dataTransfer.files]));

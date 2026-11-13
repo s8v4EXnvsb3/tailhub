@@ -17,7 +17,7 @@ function setFile(f) {
   go.disabled = false; done.hidden = true;
   if (T.mode === 'ringtone' || T.mode === 'trim') { const p = $('preview'); p.src = URL.createObjectURL(f); p.hidden = false; }
 }
-drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('click', (e) => { if (e.target !== fileIn) fileIn.click(); });
 fileIn.addEventListener('change', () => setFile(fileIn.files[0]));
 ['dragenter', 'dragover'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove('over'); }));
@@ -30,6 +30,16 @@ async function load() {
   ffmpeg.on('log', ({ message }) => { logTail.push(message); if (logTail.length > 30) logTail.shift(); });
   await ffmpeg.load({ coreURL: '/vendor/ffmpeg-core/ffmpeg-core.js', wasmURL: '/vendor/ffmpeg-core/ffmpeg-core.wasm' });
   return ffmpeg;
+}
+
+// Reads the duration from ffmpeg's own log ("Duration: 00:00:04.00"). Running with no output makes ffmpeg exit non-zero, which is expected.
+async function ffmpegDuration(inName) {
+  logTail.length = 0; const seen = [];
+  const onLog = ({ message }) => seen.push(message); ffmpeg.on('log', onLog);
+  try { await ffmpeg.exec(['-hide_banner', '-i', inName]); } catch (e) { /* expected */ }
+  ffmpeg.off('log', onLog);
+  const m = seen.join(' ').match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+  return m ? (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]) : NaN;
 }
 
 function mediaDuration(f) {
@@ -55,7 +65,8 @@ async function buildArgs(inName) {
       return { out: 'out.mp3', args: a, mime: 'audio/mpeg', suffix: '-compressed', outExt: 'mp3' };
     }
     case 'compress-video': {
-      const dur = await mediaDuration(file);
+      let dur = await mediaDuration(file);
+      if (!dur || !isFinite(dur)) dur = await ffmpegDuration(inName); // browsers like Safari cannot always read video metadata, so ask ffmpeg
       if (!dur || !isFinite(dur)) throw new Error('Could not read the video length. Try an MP4 file.');
       const audioK = 96;
       const totalK = (T.targetMB * 8192 * 0.92) / dur; // kbit/s budget incl. audio

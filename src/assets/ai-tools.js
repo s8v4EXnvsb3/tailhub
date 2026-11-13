@@ -10,7 +10,7 @@ const bar = (frac, text) => { $('prog').hidden = false; $('bar').style.width = M
 const barOff = () => { $('prog').hidden = true; };
 const wireDrop = (onFiles) => {
   const d = $('drop'), f = $('file');
-  d.onclick = () => f.click(); f.onchange = () => { onFiles([...f.files]); f.value = ''; };
+  d.onclick = (e) => { if (e.target !== f) f.click(); }; f.onchange = () => { onFiles([...f.files]); f.value = ''; };
   ['dragenter', 'dragover'].forEach((e) => d.addEventListener(e, (ev) => { ev.preventDefault(); d.classList.add('over'); }));
   ['dragleave', 'drop'].forEach((e) => d.addEventListener(e, (ev) => { ev.preventDefault(); d.classList.remove('over'); }));
   d.addEventListener('drop', (ev) => onFiles([...ev.dataTransfer.files]));

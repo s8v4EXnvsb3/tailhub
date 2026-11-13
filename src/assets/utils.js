@@ -7,7 +7,7 @@
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const wireDrop = (onFiles) => {
     const d = $('drop'), f = $('file');
-    d.onclick = () => f.click(); f.onchange = () => { onFiles([...f.files]); f.value = ''; };
+    d.onclick = (e) => { if (e.target !== f) f.click(); }; f.onchange = () => { onFiles([...f.files]); f.value = ''; };
     ['dragenter', 'dragover'].forEach((e) => d.addEventListener(e, (ev) => { ev.preventDefault(); d.classList.add('over'); }));
     ['dragleave', 'drop'].forEach((e) => d.addEventListener(e, (ev) => { ev.preventDefault(); d.classList.remove('over'); }));
     d.addEventListener('drop', (ev) => onFiles([...ev.dataTransfer.files]));
@@ -124,9 +124,10 @@
             const type = $('fmt').value; if (type === 'image/jpeg') { x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); }
             x.drawImage(bmp, 0, 0, w, h);
             const blob = await new Promise((r) => c.toBlob(r, type, +$('qual').value / 100));
-            const name = f.name.replace(/\.[^.]+$/, '') + '-compressed.' + extOf[type], url = URL.createObjectURL(blob);
+            const got = blob.type || type, fellBack = got !== type; // Firefox/Safari cannot encode WebP and silently return PNG
+            const name = f.name.replace(/\.[^.]+$/, '') + '-compressed.' + (extOf[got] || 'png'), url = URL.createObjectURL(blob);
             const pct = Math.round((1 - blob.size / f.size) * 100);
-            row.innerHTML = `<img src="${url}" alt=""><div class="m"><b>${esc(name)}</b>${fmt(f.size)} → ${fmt(blob.size)} (${pct >= 0 ? '−' + pct : '+' + -pct}%) · ${w}×${h}</div><a class="btn dl" style="padding:8px 14px" download="${esc(name)}" href="${url}">Download</a>`;
+            row.innerHTML = `<img src="${url}" alt=""><div class="m"><b>${esc(name)}</b>${fmt(f.size)} → ${fmt(blob.size)} (${pct >= 0 ? '−' + pct : '+' + -pct}%) · ${w}×${h}${fellBack ? '<br><span class="note">This browser cannot save ' + esc(extOf[type].toUpperCase()) + ', so it saved ' + esc((extOf[got] || 'png').toUpperCase()) + ' instead. Pick JPG for smaller files.</span>' : ''}</div><a class="btn dl" style="padding:8px 14px" download="${esc(name)}" href="${url}">Download</a>`;
           } catch { row.innerHTML = `<div class="m"><b>${esc(f.name)}</b><span class="note err">Could not read this image.</span></div>`; }
         }
       });

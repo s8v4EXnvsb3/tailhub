@@ -1,6 +1,8 @@
 // Tests every ffmpeg-based tool with a real fixture, then verifies the OUTPUT file with ffprobe.
 // usage: node tests/ffmpeg.mjs [baseUrl] [slugFilter]
-import { chromium } from 'playwright-core';
+import * as pw from 'playwright-core';
+const ENGINE = process.env.ENGINE || 'chromium';
+const chromium = pw[ENGINE];
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,7 +40,7 @@ const pick = (slug) => {
 const { tools } = await import(pathToFileURL(path.resolve('src/tools.mjs')).href);
 const list = tools.filter((t) => t.kind === 'ffmpeg' && (!only || t.slug.includes(only)));
 
-const b = await chromium.launch({ executablePath: exe, headless: true });
+const b = await chromium.launch({ ...(ENGINE === 'chromium' ? { executablePath: exe } : {}), headless: true });
 const ctx = await b.newContext({ acceptDownloads: true });
 let pass = 0, fail = 0;
 for (const t of list) {

@@ -1,12 +1,14 @@
 // Tests the five in-browser AI tools with real inputs and checks the actual output.
 // Needs network the first time (model weights come from huggingface.co). usage: node tests/ai.mjs [baseUrl] [slug]
-import { chromium } from 'playwright-core';
+import * as pw from 'playwright-core';
+const ENGINE = process.env.ENGINE || 'chromium';
+const chromium = pw[ENGINE];
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 const base = process.argv[2] || 'http://127.0.0.1:4173', only = process.argv[3];
 const exe = process.env.BROWSER_EXE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const FX = 'tests/fixtures/'; await mkdir(FX, { recursive: true });
-const b = await chromium.launch({ executablePath: exe, headless: true });
+const b = await chromium.launch({ ...(ENGINE === 'chromium' ? { executablePath: exe } : {}), headless: true });
 const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
 const p = await ctx.newPage(); p.setDefaultTimeout(240000);
 const errs = []; p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => m.type() === 'error' && !/favicon|^INFO:/.test(m.text()) && errs.push(m.text()));

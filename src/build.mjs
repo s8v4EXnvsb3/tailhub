@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tools, categories, featured } from './tools.mjs';
@@ -8,7 +9,15 @@ import { ico, toolIcon, catIcon } from './icons.mjs';
 
 const SITE = 'TailHub';
 const URL_BASE = process.env.SITE_URL || 'https://tailhub-liard.vercel.app';
-const DATE = '2026-11-13';
+// Per-page "updated" dates: a page's date only moves when its own content changes (hash stored in src/dates.json).
+const TODAY = new Date().toISOString().slice(0, 10);
+const datesFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'dates.json');
+const dates = fs.existsSync(datesFile) ? JSON.parse(fs.readFileSync(datesFile, 'utf8')) : {};
+const dateOf = (t) => {
+  const h = crypto.createHash('sha1').update(JSON.stringify(t) + JSON.stringify(buildPost(t)) + String(UI[t.slug] || '')).digest('hex').slice(0, 12);
+  if (!dates[t.slug] || dates[t.slug].h !== h) dates[t.slug] = { h, d: TODAY };
+  return dates[t.slug].d;
+};
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const nm = (p) => path.join(root, 'node_modules', p);
@@ -109,7 +118,7 @@ function postBody(t) {
   const p = buildPost(t), title = postTitle(t);
   const related = tools.filter((x) => x.category === t.category && x.slug !== t.slug).slice(0, 4);
   return `<article class="post"><div class="crumbs"><a href="/">Home</a> / <a href="/blog/">Blog</a> / ${esc(t.title)}</div>
-<h1>${esc(title)}</h1><div class="meta">${esc(cat[t.category].name)} · Updated ${DATE} · ${Math.max(2, Math.round((p.about.length + p.steps.join('').length + p.tips.join('').length) / 900))} min read</div>
+<h1>${esc(title)}</h1><div class="meta">${esc(cat[t.category].name)} · Updated ${dateOf(t)} · ${Math.max(2, Math.round((p.about.length + p.steps.join('').length + p.tips.join('').length) / 900))} min read</div>
 <p><b>${esc(t.desc)}</b></p>
 <div class="tcta"><div><b>${esc(t.title)}</b><br><span style="color:var(--mut)">Free, private, no sign-up.</span></div><a class="btn" href="${toolUrl(t)}">Open the tool</a></div>
 <h2>What is it?</h2><p>${esc(p.about)}</p>
@@ -119,7 +128,7 @@ function postBody(t) {
 <h2>Is it private?</h2><p>${t.kind === 'tts' ? 'Yes. The speech is produced by voices already installed on your device, so your text is never sent to a server.' : t.kind === 'ai' ? 'Yes. The AI model is downloaded once and then runs inside your browser, so the files you choose never leave your device.' : 'Yes. TailHub tools run entirely in your browser using modern web technology. Your files and text never leave your device, and nothing is stored.'}</p>
 <div class="tcta"><div><b>Ready to try it?</b></div><a class="btn" href="${toolUrl(t)}">Use ${esc(t.title)}</a></div>
 <h2>More guides</h2><div class="grid">${related.map((r) => `<a class="pcard" href="${postUrl(r)}"><b>${esc(r.title)}</b><span>${esc(r.desc)}</span></a>`).join('')}</div></article>
-<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: title, description: t.desc, image: URL_BASE + '/assets/og.png', datePublished: DATE, dateModified: DATE, author: { '@type': 'Organization', name: SITE, url: URL_BASE }, publisher: { '@type': 'Organization', name: SITE, url: URL_BASE, logo: { '@type': 'ImageObject', url: URL_BASE + '/assets/icon-180.png' } }, mainEntityOfPage: URL_BASE + postUrl(t) })}</script><script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ name: 'Home', item: URL_BASE + '/' }, { name: 'Blog', item: URL_BASE + '/blog/' }, { name: title, item: URL_BASE + postUrl(t) }].map((x, i) => ({ '@type': 'ListItem', position: i + 1, ...x })) })}</script>`;
+<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: title, description: t.desc, image: URL_BASE + '/assets/og.png', datePublished: dateOf(t), dateModified: dateOf(t), author: { '@type': 'Organization', name: SITE, url: URL_BASE }, publisher: { '@type': 'Organization', name: SITE, url: URL_BASE, logo: { '@type': 'ImageObject', url: URL_BASE + '/assets/icon-180.png' } }, mainEntityOfPage: URL_BASE + postUrl(t) })}</script><script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ name: 'Home', item: URL_BASE + '/' }, { name: 'Blog', item: URL_BASE + '/blog/' }, { name: title, item: URL_BASE + postUrl(t) }].map((x, i) => ({ '@type': 'ListItem', position: i + 1, ...x })) })}</script>`;
 }
 for (const t of tools) write(`blog/${t.slug}/index.html`, page({ title: postTitle(t), desc: (`${t.desc} A short guide with steps, tips and common uses.`.length > 170 ? `Guide to ${t.title}: ${t.desc.split('.')[0]}.` : `${t.desc} A short guide with steps, tips and common uses.`), path: postUrl(t), body: postBody(t) }));
 
@@ -134,7 +143,7 @@ const landing = `<section class="hero"><h1>Free online tools that run in your br
 <ul class="facts"><li><b>${tools.length}</b> tools</li><li><b>${categories.length}</b> categories</li><li>Free, no sign-up</li><li>Files stay on your device</li></ul></section>
 <div class="chips landing-only">${categories.map((c) => `<a class="chip" href="#${c.id}">${catIcon(c)}${esc(c.name)}</a>`).join('')}</div>
 <section class="landing-only"><div class="shead"><div><h2>Popular</h2><p>The tools people reach for most.</p></div></div><div class="grid">${feat.map(card).join('')}</div></section>
-<section class="landing-only sponsors" id="sponsors"><div class="shead"><div><h2>Sponsors</h2><p>Sponsors help keep TailHub free. <span class="adtag">Ad</span></p></div><a class="lnk" href="/contact/"><b>Become a sponsor</b>${ico('arrow-right', 15)}</a></div><div class="sgrid">${[1, 2, 3, 4, 5, 6].map((n) => `<a class="slot" href="/contact/"><span class="sn">0${n}</span>${ico('plus', 18)}<b>Your brand here</b><span>Reach people who use free tools every day</span></a>`).join('')}</div></section>
+<section class="landing-only sponsors" id="sponsors"><div class="shead"><div><h2>Sponsors</h2><p>Sponsors help keep TailHub free. <span class="adtag">Ad</span></p></div><a class="lnk" href="/contact/"><b>Become a sponsor</b>${ico('arrow-right', 15)}</a></div><div class="sgrid">${[1, 2, 3, 4].map((n) => `<a class="slot" href="/contact/"><span class="sn">0${n}</span>${ico('plus', 18)}<b>Your brand here</b><span>Reach people who use free tools every day</span></a>`).join('')}</div></section>
 <p id="none" class="note" hidden style="text-align:center;font-size:17px;padding:40px">No tools match your search.</p>
 ${categories.map((c) => `<section class="cat" id="${c.id}"><div class="shead"><div><h2>${catIcon(c)}${esc(c.name)}</h2><p>${esc(c.blurb)}</p></div></div><div class="grid">${tools.filter((t) => t.category === c.id).map(card).join('')}</div></section>`).join('')}
 <section class="landing-only"><div class="shead"><div><h2>How it works</h2></div></div><div class="steps"><div class="step"><i>01</i><b>Pick a tool</b><p>Use the sidebar or search to find what you need.</p></div><div class="step"><i>02</i><b>Add your file or text</b><p>Drop it in. It is processed by your own browser.</p></div><div class="step"><i>03</i><b>Download the result</b><p>Nothing is uploaded, stored or tracked.</p></div></div></section>
@@ -147,7 +156,11 @@ write('contact/index.html', page({ title: 'Contact and Sponsorship', desc: 'Cont
 <section class="contact"><h2>Promote your brand on TailHub</h2><p>Sponsors appear in the Sponsors section on the home page, in front of people who use free tools every day. Email us with your brand name, website and what you want to promote, and we will reply with options and pricing.</p><p><a class="btn" href="mailto:s8v4EXnvsb3@proton.me?subject=Sponsor%20TailHub">${ico('mail', 16)} s8v4EXnvsb3@proton.me</a></p><h2>Anything else</h2><p>Found a bug or want a new tool? Write to the same address and say which tool you mean.</p></section>` }));
 // ------------------------------------------------------------------ 404, sitemap, robots
 write('404.html', page({ title: 'Page not found', desc: 'Page not found', path: '/404/', noindex: true, body: `<div class="hero"><h1>404</h1><p>That page does not exist. Try the sidebar or search.</p><a class="btn" href="/">Back to all tools</a></div>` }));
+const slugOfUrl = (u) => { const m = u.match(/^\/(?:blog\/)?([^/]+)\/$/); return m && dates[m[1]] ? m[1] : null; };
+const siteDate = tools.map(dateOf).sort().pop();
+const lastmodOf = (u) => { const k = slugOfUrl(u); return k ? dates[k].d : siteDate; };
 const urls = ['/', '/blog/', '/contact/', ...tools.flatMap((t) => [toolUrl(t), postUrl(t)])];
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${URL_BASE}${u}</loc><lastmod>${DATE}</lastmod></url>`).join('')}</urlset>`);
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${URL_BASE}${u}</loc><lastmod>${lastmodOf(u)}</lastmod></url>`).join('')}</urlset>`);
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${URL_BASE}/sitemap.xml\n`);
 console.log(`Built ${tools.length} tools + ${tools.length} blog posts -> dist/`);
+fs.writeFileSync(datesFile, JSON.stringify(dates, null, 1) + '\n');

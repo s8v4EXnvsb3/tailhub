@@ -1,6 +1,8 @@
 // Tests every non-ffmpeg tool with asserted results, plus site structure, theme, sidebar, icons, TTS guide.
 // usage: node tests/tools.mjs [baseUrl]
-import { chromium } from 'playwright-core';
+import * as pw from 'playwright-core';
+const ENGINE = process.env.ENGINE || 'chromium';
+const chromium = pw[ENGINE];
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -8,15 +10,15 @@ import { pathToFileURL } from 'node:url';
 const base = process.argv[2] || 'http://127.0.0.1:4173';
 const exe = process.env.BROWSER_EXE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const { PDFDocument } = createRequire(import.meta.url)('pdf-lib');
-const b = await chromium.launch({ executablePath: exe, headless: true });
-const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
+const b = await chromium.launch({ ...(ENGINE === 'chromium' ? { executablePath: exe } : {}), headless: true });
+const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true, ...(ENGINE === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}) });
 const p = await ctx.newPage();
 const errs = []; p.on('pageerror', (e) => errs.push(p.url() + ' :: ' + e.message)); p.on('console', (m) => m.type() === 'error' && !/favicon|voices/.test(m.text()) && errs.push(p.url() + ' :: ' + m.text()));
 let pass = 0, fail = 0;
 const check = (name, ok, got) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${ok ? '' : '  -> got: ' + JSON.stringify(got)}`); };
 const go = (s) => p.goto(`${base}/${s}`);
 const val = (id) => p.inputValue('#' + id);
-const txt = (id) => p.innerText('#' + id);
+const txt = (id) => p.textContent('#' + id);
 const t = async (slug, fn) => { await go(`${slug}/`); try { await fn(); } catch (e) { check(slug, false, e.message.split('\n')[0]); } };
 const eq = (slug, got, want) => check(slug, got === want, got);
 const has = (slug, got, re) => check(slug, re.test(got), got);
@@ -50,10 +52,12 @@ await p.setViewportSize({ width: 390, height: 800 }); await p.click('.burger'); 
 await p.setViewportSize({ width: 1280, height: 900 });
 
 // ---------- TTS pages
-const tts = tools.filter((x) => x.kind === 'tts');
+// Playwright's WebKit build has no speech engine, so speech tests only run on Chromium and Firefox.
+const NOSPEECH = ENGINE === 'webkit';
+const tts = NOSPEECH ? [] : tools.filter((x) => x.kind === 'tts');
 for (const x of tts) {
   await go(`${x.slug}/`);
-  const gt = await p.locator('#guide').innerText(), guide = await p.locator('#guide').count();
+  const gt = await p.locator('#guide').textContent(), guide = await p.locator('#guide').count();
   const voices = await p.locator('#voice option').count(); const info = await txt('info'); const open = await p.evaluate(() => document.getElementById('guide').open);
   const noVoice = /No .* voice is installed/.test(info);
   let ok = guide === 1 && gt.includes('ms-settings:speech') && gt.includes('Edge') && gt.includes('macOS') && gt.includes('Android') && gt.includes('iPhone') && (noVoice ? open && info.includes('guide') : voices >= 1);
@@ -61,11 +65,13 @@ for (const x of tts) {
   if (!(await val('in')).length) ok = false;
   check(`tts ${x.slug}: guide present, ${noVoice ? 'no voice -> guide auto-opened' : voices + ' voice(s)'}`, ok, { info, open });
 }
+if (!NOSPEECH) {
 await go('world-languages-text-to-speech/'); const before = await val('in'); await p.selectOption('#lang', 'ru-RU'); const after = await val('in');
 check('tts world: changing language swaps sample text and guide name', before !== after && /[А-Яа-я]/.test(after) && (await txt('guide')).includes('Russian'), { after });
 await go('korean-text-to-speech/'); await p.click('#cpset'); check('tts guide: copy ms-settings:speech', (await p.evaluate(() => navigator.clipboard.readText())) === 'ms-settings:speech');
 await p.evaluate(() => { window.__spoken = []; const o = speechSynthesis.speak.bind(speechSynthesis); speechSynthesis.speak = (u) => { window.__spoken.push(u.text); o(u); }; });
 await p.click('#play'); check('tts Speak calls speechSynthesis with the text', (await p.evaluate(() => window.__spoken)).join(' ').includes('안녕하세요'));
+}
 
 // ---------- text tools
 await t('word-counter', async () => { await p.fill('#in', 'one two three. four'); has('word-counter', await txt('stats'), /4[\s\S]*Words|Words[\s\S]*4/i); });
@@ -106,7 +112,8 @@ await t('roman-numeral-converter', async () => { eq('2026 -> MMXXVI', await val(
 await t('pomodoro-timer', async () => { await p.click('#start'); await p.waitForTimeout(1500); has('pomodoro counts down', await txt('time'), /^24:5\d$/); await p.click('#start'); eq('pomodoro pause label', await txt('start'), 'Start'); await p.click('#reset'); eq('pomodoro reset', await txt('time'), '25:00'); await p.click('#skip'); eq('pomodoro skip -> break 5:00', await txt('time'), '05:00'); });
 // ---------- image / pdf / design
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC', 'base64');
-await t('image-compressor', async () => { await p.setInputFiles('#file', [{ name: 'a.png', mimeType: 'image/png', buffer: png }]); await p.waitForSelector('.res a.dl', { timeout: 8000 }); const d = await download(() => p.click('.res a.dl')); check('image-compressor outputs webp', /\.webp$/.test(d.name) && d.buf.subarray(8, 12).toString() === 'WEBP', d.name); });
+await t('image-compressor', async () => { await p.setInputFiles('#file', [{ name: 'a.png', mimeType: 'image/png', buffer: png }]); await p.waitForSelector('.res a.dl', { timeout: 8000 }); // Playwright's Firefox does not emit a download event for .webp names (PNG/JPG/BIN work), so off Chromium read the link itself.
+  const d = ENGINE === 'firefox' ? await p.evaluate(async () => { const a = document.querySelector('.res a.dl'); return { name: a.getAttribute('download'), bytes: Array.from(new Uint8Array(await (await (await fetch(a.href)).blob()).arrayBuffer())) }; }).then((r) => ({ name: r.name, buf: Buffer.from(r.bytes) })) : await download(() => p.click('.res a.dl')); const isWebp = d.buf.subarray(8, 12).toString() === 'WEBP', isPng = d.buf[1] === 0x50; check('image-compressor: file extension matches real content', (/\.webp$/.test(d.name) && isWebp) || (/\.png$/.test(d.name) && isPng), d.name); });
 await t('image-to-base64', async () => { await p.setInputFiles('#file', [{ name: 'a.png', mimeType: 'image/png', buffer: png }]); await p.waitForFunction(() => document.getElementById('out').value.length > 20); const o = await val('out'); check('image-to-base64 data URI decodes to the same PNG', o.startsWith('data:image/png;base64,') && Buffer.from(o.split(',')[1], 'base64').equals(png), o.slice(0, 40)); await p.check('#raw'); check('image-to-base64 raw mode', !(await val('out')).startsWith('data:')); });
 let pdfBuf;
 await t('image-to-pdf', async () => { await p.setInputFiles('#file', [{ name: 'a.png', mimeType: 'image/png', buffer: png }, { name: 'b.png', mimeType: 'image/png', buffer: png }]); const d = await download(() => p.click('#go')); pdfBuf = d.buf; const n = (await PDFDocument.load(d.buf)).getPageCount(); check('image-to-pdf -> valid 2-page PDF', d.buf.subarray(0, 4).toString() === '%PDF' && n === 2, n); });
