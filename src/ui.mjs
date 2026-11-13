@@ -1,12 +1,12 @@
 // Per-tool interface markup. Element ids must match src/assets/utils.js / utils2.js.
 import { ico } from './icons.mjs';
-const ta = (id, ph = '', rows = 8, ro = false) => `<textarea id="${id}" rows="${rows}" placeholder="${ph}" spellcheck="false"${ro ? ' readonly' : ''}></textarea>`;
+const ta = (id, ph = '', rows = 8, ro = false) => `<textarea id="${id}" aria-label="${ph || (ro ? 'Result' : 'Text')}" rows="${rows}" placeholder="${ph}" spellcheck="false"${ro ? ' readonly' : ''}></textarea>`;
 const btn = (id, label, cls = '') => `<button class="btn ${cls}" id="${id}">${label}</button>`;
 const lab = (text, inner) => `<label class="fld"><span>${text}</span>${inner}</label>`;
 const chk = (id, text, on = false) => `<label class="chk"><input type="checkbox" id="${id}"${on ? ' checked' : ''}> ${text}</label>`;
 const num = (id, v, extra = '') => `<input type="number" id="${id}" value="${v}" ${extra}>`;
 const sel = (id, opts) => `<select id="${id}">${opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
-const drop = (text, multiple = false, accept = '') => `<div class="drop" id="drop"><input type="file" id="file" hidden${multiple ? ' multiple' : ''}${accept ? ` accept="${accept}"` : ''}><div class="drop-i">${ico('upload', 22)}</div><p><b>${text}</b><br><span>or drag and drop here</span></p></div>`;
+const drop = (text, multiple = false, accept = '') => `<div class="drop" id="drop" role="button" tabindex="0" aria-label="${text}. Press Enter to browse files, or drop files here"><input type="file" id="file" hidden${multiple ? ' multiple' : ''}${accept ? ` accept="${accept}"` : ''}><div class="drop-i">${ico('upload', 22)}</div><p><b>${text}</b><br><span>or drag and drop here</span></p></div>`;
 const out = (id = 'out') => ta(id, 'Result appears here', 8, true);
 
 const PROG = '<div class="prog" id="prog" hidden><div class="bar"><i id="bar"></i></div><span id="pt"></span></div>';
@@ -76,18 +76,18 @@ export function ttsUI(t) {
   const langs = t.multi ? `${lab('Language', `<select id="lang">${t.multi.map((l) => `<option value="${l}">${dn.of(l.replace('_', '-'))} (${l})</option>`).join('')}</select>`)}` : '';
   const guide = `<details class="guide" id="guide"><summary>No ${t.multi ? 'voice for your language' : name + ' voice'}? How to add one</summary>
 <p>This tool speaks with the voices installed on your device, so the text never leaves your computer. If the voice list is empty or says <b>${t.multi ? 'no voice is installed' : 'No ' + t.lang + ' voice'}</b>, add a <b class="gl">${name}</b> voice:</p>
-<h3>Windows 10 and 11</h3>
+<h2 class="gh">Windows 10 and 11</h2>
 <ol><li>Press <kbd>Win</kbd> + <kbd>R</kbd>, paste <code>ms-settings:speech</code> and press Enter. <button type="button" class="btn ghost sm" id="cpset">Copy</button></li>
 <li>Under <b>Manage voices</b>, click <b>Add voices</b>.</li>
 <li>Search for <b class="gl">${name}</b>, tick it and click <b>Add</b>. Wait for the download to finish.</li>
 <li>Close the browser completely, reopen it and reload this page.</li></ol>
-<h3>Easiest option: Microsoft Edge</h3>
+<h2 class="gh">Easiest option: Microsoft Edge</h2>
 <p>Edge includes many free <b>Online (Natural)</b> voices for <span class="gl">${name}</span>. Nothing to install, but you need an internet connection. Open this page in Edge and pick a voice marked "Online (Natural)".</p>
-<h3>macOS</h3>
+<h2 class="gh">macOS</h2>
 <p>System Settings, then Accessibility, then Spoken Content. Open <b>System Voice</b>, choose <b>Manage Voices</b>, find <span class="gl">${name}</span> and download one.</p>
-<h3>Android</h3>
+<h2 class="gh">Android</h2>
 <p>Settings, then System, then Languages &amp; input, then Text-to-speech output. Open the engine's settings, choose <b>Install voice data</b> and select <span class="gl">${name}</span>. Chrome on Android usually has voices already.</p>
-<h3>iPhone and iPad</h3>
+<h2 class="gh">iPhone and iPad</h2>
 <p>Settings, then Accessibility, then Spoken Content, then Voices. Choose <span class="gl">${name}</span> and download a voice.</p>
 <p class="muted">After installing, restart the browser. If the voice still does not show, try Edge or Chrome.</p></details>`;
   return `${langs}${lab('Text', `<textarea id="in" rows="8" ${/he|ar|ur/.test(t.lang) ? 'dir="auto"' : ''}>${t.sample}</textarea>`)}<div class="two">${lab('Voice', '<select id="voice"></select>')}<div>${lab('Speed: <b id="rv">1.0x</b>', '<input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">')}${lab('Pitch: <b id="pv">1.0</b>', '<input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">')}</div></div><div class="row">${btn('play', 'Speak')}${btn('pause', 'Pause', 'ghost')}${btn('stop', 'Stop', 'ghost')}</div><p id="info" class="note"></p>${guide}`;

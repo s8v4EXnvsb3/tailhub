@@ -30,3 +30,9 @@
     hq.addEventListener('input', run);
   }
 })();
+
+// Keyboard access for file drop zones (Enter or Space opens the file picker)
+document.addEventListener('keydown', (e) => {
+  const d = e.target.closest && e.target.closest('.drop');
+  if (d && e.target === d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); d.click(); }
+});
