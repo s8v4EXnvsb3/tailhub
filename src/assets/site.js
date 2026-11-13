@@ -36,3 +36,14 @@ document.addEventListener('keydown', (e) => {
   const d = e.target.closest && e.target.closest('.drop');
   if (d && e.target === d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); d.click(); }
 });
+
+// Warm up the heavy engine when the user shows intent, so it is already downloading while they pick a file.
+// Skipped on Save-Data and slow connections. Files are immutable-cached, so this is a one-time cost.
+document.addEventListener('DOMContentLoaded', () => {
+  const d = document.getElementById('drop'); if (!d) return;
+  const c = navigator.connection || {}; if (c.saveData || /(^|-)2g$|3g/.test(c.effectiveType || '')) return;
+  const src = window.TOOL && window.TOOL.kind === 'ai' ? '/vendor/transformers/ort-wasm-simd-threaded.asyncify.wasm' : (document.querySelector('script[src*="ffmpeg-tool"]') ? '/vendor/ffmpeg-core/ffmpeg-core.wasm' : '');
+  if (!src) return;
+  let done = false; const go = () => { if (done) return; done = true; fetch(src, { priority: 'low' }).catch(() => {}); };
+  ['pointerenter', 'focusin', 'touchstart'].forEach((e) => d.addEventListener(e, go, { once: true, passive: true }));
+});

@@ -132,6 +132,7 @@ const tools = {
       } catch (e) { fail(e); }
       busy(false);
     };
+    if ((navigator.deviceMemory && navigator.deviceMemory <= 4) || /Mobi|Android/i.test(navigator.userAgent)) $('model').value = 'Xenova/whisper-tiny'; // smaller download and memory on phones
     wireDrop((fs) => { const f = fs.find((x) => /^(audio|video)\//.test(x.type) || /\.(mp3|wav|m4a|aac|ogg|opus|flac|mp4|webm|mov)$/i.test(x.name)); if (f) run(f); else note('Choose an audio or video file.', 'err'); });
     $('fmt').onchange = render;
     $('copy').onclick = async () => { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied'; setTimeout(() => ($('copy').textContent = 'Copy'), 1200); };
